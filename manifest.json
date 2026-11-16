@@ -1,0 +1,16 @@
+{
+  "name": "ExpenseLens Multi-User",
+  "short_name": "ExpenseLens",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3143/3143498.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
