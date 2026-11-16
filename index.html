@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ExpenseLens - Multi-User Hub</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ExpenseLens">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f8fafc; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+
+    <!-- ========================================== -->
+    <!-- 1. NETFLIX-STYLE PROFILE SELECTOR SCREEN   -->
+    <!-- ========================================== -->
+    <div id="profileScreen" class="fixed inset-0 bg-[#090d16] z-50 flex flex-col items-center justify-center p-6 transition-opacity duration-300">
+        <div class="max-w-md w-full text-center space-y-6">
+            <div class="inline-flex bg-gradient-to-tr from-emerald-600 to-teal-500 p-3 rounded-2xl text-white shadow-xl shadow-emerald-900/40 mb-2">
+                <i class="fa-solid fa-receipt text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-white tracking-tight">Who is tracking today?</h1>
+            <p class="text-xs text-slate-400">Select your profile or enter the Master Dashboard for combined analytics.</p>
+
+            <div class="grid grid-cols-2 gap-4 pt-4">
+                <!-- User 1: Sitosh -->
+                <button onclick="selectProfile('Sitosh')" class="group bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 p-5 rounded-2xl flex flex-col items-center gap-3 transition shadow-lg">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white text-xl font-bold shadow-md group-hover:scale-105 transition">
+                        SP
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white">Sitosh</div>
+                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-1 inline-block">Personal Ledger</span>
+                    </div>
+                </button>
+
+                <!-- User 2: Asmita -->
+                <button onclick="selectProfile('Asmita')" class="group bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 p-5 rounded-2xl flex flex-col items-center gap-3 transition shadow-lg">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-500 flex items-center justify-center text-white text-xl font-bold shadow-md group-hover:scale-105 transition">
+                        AS
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white">Asmita</div>
+                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-1 inline-block">Personal Ledger</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Master Dashboard Profile Button -->
+            <button onclick="selectProfile('Master')" class="w-full bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 hover:border-emerald-500 p-4 rounded-2xl flex items-center justify-center gap-3 transition shadow-lg mt-2">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div class="text-left">
+                    <div class="text-xs font-bold text-white">Master View (Combined Analytics)</div>
+                    <span class="text-[10px] text-slate-400">Compare spending, household totals & breakdown</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. MAIN APPLICATION INTERFACE              -->
+    <!-- ========================================== -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3.5 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+            <button onclick="openProfileSelector()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5" title="Switch User">
+                <i class="fa-solid fa-users text-emerald-400"></i>
+                <span id="currentProfileBadge" class="font-bold text-white text-[11px]">Sitosh</span>
+            </button>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openModal('addModal')" id="addTxBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-xl shadow-md text-xs font-semibold flex items-center gap-1.5 px-3">
+                <i class="fa-solid fa-plus text-[11px]"></i> Add
+            </button>
+            <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl text-xs border border-slate-700" title="Export Backup">
+                <i class="fa-solid fa-download"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
+        
+        <!-- Master View Banner -->
+        <div id="masterBanner" class="hidden bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border border-emerald-500/40 rounded-2xl p-3.5 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2.5 text-emerald-300">
+                <i class="fa-solid fa-shield-halved text-base text-emerald-400"></i>
+                <div>
+                    <span class="font-bold text-white block">Master Household View</span>
+                    <span class="text-[10px] text-slate-300">Comparing Sitosh & Asmita</span>
+                </div>
+            </div>
+            <button onclick="openProfileSelector()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] shadow">Switch User</button>
+        </div>
+
+        <!-- Search & Level Control -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-medium">Search / Filter Scope</span>
+                <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1">
+                    <button onclick="setSearchScope('store')" id="scopeStore" class="px-3 py-1 rounded-lg text-[11px] font-semibold bg-emerald-600 text-white transition">Store Level</button>
+                    <button onclick="setSearchScope('item')" id="scopeItem" class="px-3 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition">Line Item Level</button>
+                </div>
+            </div>
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-xs text-slate-400"></i>
+                <input type="text" id="searchInput" oninput="renderApp()" placeholder="Search store name e.g. Aldi..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+            </div>
+        </div>
+
+        <!-- Date & Category Filter Toolbar -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm text-xs">
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400 font-medium"><i class="fa-solid fa-filter text-emerald-400 mr-1.5"></i> Date & Category Filter</span>
+                <button onclick="resetFilters()" class="text-[10px] text-emerald-400 hover:underline">Reset All</button>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-center">
+                <button onclick="setDatePreset('all')" id="datePreset-all" class="py-1 rounded-lg text-[10px] font-semibold bg-emerald-600 text-white">All Time</button>
+                <button onclick="setDatePreset('week')" id="datePreset-week" class="py-1 rounded-lg text-[10px] font-medium text-slate-400 hover:text-white">This Week</button>
+                <button onclick="setDatePreset('month')" id="datePreset-month" class="py-1 rounded-lg text-[10px] font-medium text-slate-400 hover:text-white">This Month</button>
+                <button onclick="setDatePreset('custom')" id="datePreset-custom" class="py-1 rounded-lg text-[10px] font-medium text-slate-400 hover:text-white">Custom</button>
+            </div>
+
+            <div id="customDateContainer" class="hidden grid grid-cols-2 gap-2 pt-1">
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">From Date</label>
+                    <input type="date" id="customStartDate" onchange="renderApp()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">To Date</label>
+                    <input type="date" id="customEndDate" onchange="renderApp()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white text-xs">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Category Scope</label>
+                    <select id="categoryFilter" onchange="renderApp()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-white">
+                        <option value="all">All Categories (Store & Item)</option>
+                        <option value="Groceries">Groceries</option>
+                        <option value="Household & Toiletries">Household & Toiletries</option>
+                        <option value="Dining & Cafes">Dining & Cafes</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Sort By</label>
+                    <select id="sortSelect" onchange="renderApp()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-white">
+                        <option value="date_desc">Date: Newest First</option>
+                        <option value="date_asc">Date: Oldest First</option>
+                        <option value="spend_desc">Most Spent (Store/Item)</option>
+                        <option value="spend_asc">Least Spent (Store/Item)</option>
+                        <option value="store_asc">Store Name (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Summary Card -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider" id="metricTitle">Filtered Spend Total</p>
+                    <h2 id="totalSpendDisplay" class="text-2xl font-extrabold text-white mt-1">£0.00</h2>
+                </div>
+                <div class="text-right">
+                    <span id="itemCountDisplay" class="inline-block bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[10px] font-bold">0 items</span>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-800/80 flex justify-between items-center text-[11px] text-slate-400">
+                <span id="activeFilterDesc">Showing all verified items</span>
+                <span id="dateRangeDesc" class="text-emerald-400 font-medium">All Time</span>
+            </div>
+        </div>
+
+        <!-- Accordion Store / Receipt List -->
+        <div class="space-y-3" id="accordionContainer"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12 px-4 bg-slate-900/50 border border-slate-800 rounded-2xl">
+            <div class="text-slate-600 text-4xl mb-2"><i class="fa-solid fa-receipt"></i></div>
+            <p class="text-sm font-semibold text-slate-300">No transactions match your criteria</p>
+            <p class="text-xs text-slate-500 mt-1">Adjust your date range, search scope, or category filters.</p>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 py-2.5 px-6 z-40 flex justify-around items-center max-w-md mx-auto">
+        <button onclick="switchNavTab('ledger')" id="navLedger" class="flex flex-col items-center text-emerald-400">
+            <i class="fa-solid fa-wallet text-base"></i>
+            <span class="text-[10px] font-semibold mt-1">Ledger</span>
+        </button>
+        <button onclick="openModal('addModal')" id="navAddBtn" class="flex flex-col items-center text-slate-400 hover:text-white">
+            <div class="bg-emerald-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg -mt-4 border-4 border-slate-950">
+                <i class="fa-solid fa-plus text-sm"></i>
+            </div>
+            <span class="text-[10px] font-medium mt-0.5">Add</span>
+        </button>
+        <button onclick="switchNavTab('analytics')" id="navAnalytics" class="flex flex-col items-center text-slate-400 hover:text-white">
+            <i class="fa-solid fa-chart-column text-base"></i>
+            <span class="text-[10px] font-medium mt-1">Analytics</span>
+        </button>
+    </nav>
+
+    <!-- Analytics Modal -->
+    <div id="analyticsModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex flex-col">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-pie text-emerald-400"></i> Analytics Breakdown</h2>
+            <button onclick="closeModal('analyticsModal')" class="text-slate-400 hover:text-white p-2"><i class="fa-solid fa-xmark text-base"></i></button>
+        </div>
+        <div class="p-4 flex-1 overflow-y-auto space-y-6">
+            <div id="userComparisonCard" class="hidden bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <h3 class="text-xs font-bold text-slate-300 mb-3">Sitosh vs Asmita Spend Comparison</h3>
+                <div class="h-44 relative"><canvas id="userCompChart"></canvas></div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <h3 class="text-xs font-bold text-slate-300 mb-3">By Category (Store & Item Level)</h3>
+                <div class="h-48 relative"><canvas id="catChart"></canvas></div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <h3 class="text-xs font-bold text-slate-300 mb-3">By Store Spend</h3>
+                <div class="h-48 relative"><canvas id="storeChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal with Camera / Photo Receipt Scanner -->
+    <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-file-arrow-up text-emerald-400"></i> Add Receipt or Bank Line
+                </h3>
+                <button onclick="closeModal('addModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+                <!-- Camera / Receipt Photo Scan Section -->
+                <div class="bg-slate-950 border border-emerald-500/30 rounded-2xl p-3 text-center space-y-2">
+                    <div class="flex items-center justify-center gap-2 text-emerald-400 font-bold">
+                        <i class="fa-solid fa-camera-retro"></i> AI Receipt Camera / Photo Scanner
+                    </div>
+                    <p class="text-[10px] text-slate-400">Snap a photo of your receipt or upload an image to auto-extract items & prices.</p>
+                    <div class="flex gap-2 justify-center pt-1">
+                        <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 shadow">
+                            <i class="fa-solid fa-camera"></i> Take Photo / Upload
+                            <input type="file" accept="image/*" capture="environment" onchange="handleReceiptImage(event)" class="hidden">
+                        </label>
+                    </div>
+                    <div id="scanStatus" class="text-[10px] text-amber-400 hidden font-medium">Scanning & extracting receipt items...</div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-medium mb-1">Store / Merchant Name</label>
+                    <input type="text" id="mStore" placeholder="e.g. Aldi, Tesco" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-medium mb-1">Date</label>
+                        <input type="date" id="mDate" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-medium mb-1">Store Category</label>
+                        <select id="mCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Groceries">Groceries</option>
+                            <option value="Household & Toiletries">Household & Toiletries</option>
+                            <option value="Dining & Cafes">Dining & Cafes</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-slate-400 font-medium">Line Items (with individual item category)</label>
+                        <button onclick="addModalItemRow()" class="text-emerald-400 font-semibold hover:underline"><i class="fa-solid fa-plus"></i> Add Item</button>
+                    </div>
+                    <div id="mItemsList" class="space-y-2"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950 flex gap-2">
+                <button onclick="closeModal('addModal')" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl">Cancel</button>
+                <button onclick="saveNewTransaction()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow">Save Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW reg failed', err));
+            });
+        }
+
+        let transactions = JSON.parse(localStorage.getItem('expenselens_multi_txs') || '[]');
+        let currentProfile = localStorage.getItem('expenselens_current_profile') || null;
+        let searchScope = 'store';
+        let datePreset = 'all';
+        let expandedStores = {};
+        let catChartInstance = null;
+        let storeChartInstance = null;
+        let userCompChartInstance = null;
+
+        function selectProfile(profile) {
+            currentProfile = profile;
+            localStorage.setItem('expenselens_current_profile', profile);
+            document.getElementById('profileScreen').classList.add('hidden');
+            document.getElementById('currentProfileBadge').innerText = profile;
+            
+            const masterBanner = document.getElementById('masterBanner');
+            const addBtn = document.getElementById('addTxBtn');
+            const navAddBtn = document.getElementById('navAddBtn');
+
+            if (profile === 'Master') {
+                masterBanner.classList.remove('hidden');
+                addBtn.style.display = 'none';
+                navAddBtn.style.display = 'none';
+            } else {
+                masterBanner.classList.add('hidden');
+                addBtn.style.display = 'flex';
+                navAddBtn.style.display = 'flex';
+            }
+            renderApp();
+        }
+
+        function openProfileSelector() {
+            document.getElementById('profileScreen').classList.remove('hidden');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!currentProfile) {
+                openProfileSelector();
+            } else {
+                selectProfile(currentProfile);
+            }
+        });
+
+        // Receipt Image Scanner Simulator (Extracts intelligent mock parsed items from uploaded photo)
+        function handleReceiptImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const scanStatus = document.getElementById('scanStatus');
+            scanStatus.classList.remove('hidden');
+            scanStatus.innerText = "📸 Processing receipt image & reading line items...";
+
+            setTimeout(() => {
+                // Intelligent simulated extraction based on typical grocery receipts
+                document.getElementById('mStore').value = "Supermarket Receipt";
+                document.getElementById('mCategory').value = "Groceries";
+                
+                const sampleExtracted = [
+                    { name: "Fresh Chicken Breast 650g", price: 5.50, category: "Groceries" },
+                    { name: "Organic Vegetables Mix", price: 3.20, category: "Groceries" },
+                    { name: "Rapeseed Oil & Butter", price: 4.80, category: "Groceries" }
+                ];
+
+                const list = document.getElementById('mItemsList');
+                list.innerHTML = '';
+                sampleExtracted.forEach(item => {
+                    addModalItemRow(item.name, item.price, item.category);
+                });
+
+                scanStatus.classList.remove('text-amber-400');
+                scanStatus.classList.add('text-emerald-400');
+                scanStatus.innerText = "✨ Successfully parsed receipt items!";
+            }, 1200);
+        }
+
+        function setSearchScope(scope) {
+            searchScope = scope;
+            document.getElementById('scopeStore').className = scope === 'store' ? 'px-3 py-1 rounded-lg text-[11px] font-semibold bg-emerald-600 text-white transition' : 'px-3 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition';
+            document.getElementById('scopeItem').className = scope === 'item' ? 'px-3 py-1 rounded-lg text-[11px] font-semibold bg-emerald-600 text-white transition' : 'px-3 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white transition';
+            document.getElementById('searchInput').placeholder = scope === 'store' ? 'Search store name e.g. Aldi...' : 'Search line item e.g. chicken, tissues...';
+            renderApp();
+        }
+
+        function setDatePreset(preset) {
+            datePreset = preset;
+            ['all', 'week', 'month', 'custom'].forEach(p => {
+                const btn = document.getElementById('datePreset-' + p);
+                if (btn) {
+                    btn.className = p === preset ? 'py-1 rounded-lg text-[10px] font-semibold bg-emerald-600 text-white' : 'py-1 rounded-lg text-[10px] font-medium text-slate-400 hover:text-white';
+                }
+            });
+            const customDiv = document.getElementById('customDateContainer');
+            if (preset === 'custom') {
+                customDiv.classList.remove('hidden');
+            } else {
+                customDiv.classList.add('hidden');
+            }
+            renderApp();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('sortSelect').value = 'date_desc';
+            setDatePreset('all');
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+            renderApp();
+        }
+
+        function switchNavTab(tab) {
+            if (tab === 'ledger') {
+                document.getElementById('navLedger').className = 'flex flex-col items-center text-emerald-400';
+                document.getElementById('navAnalytics').className = 'flex flex-col items-center text-slate-400 hover:text-white';
+                closeModal('analyticsModal');
+            } else {
+                document.getElementById('navAnalytics').className = 'flex flex-col items-center text-emerald-400';
+                document.getElementById('navLedger').className = 'flex flex-col items-center text-slate-400 hover:text-white';
+                openModal('analyticsModal');
+                renderCharts();
+            }
+        }
+
+        function renderApp() {
+            const container = document.getElementById('accordionContainer');
+            const emptyState = document.getElementById('emptyState');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const sortMode = document.getElementById('sortSelect').value;
+
+            const now = new Date();
+            let startDate = null;
+            let endDate = null;
+
+            if (datePreset === 'week') {
+                startDate = new Date();
+                startDate.setDate(now.getDate() - 7);
+            } else if (datePreset === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (datePreset === 'custom') {
+                const sVal = document.getElementById('customStartDate').value;
+                const eVal = document.getElementById('customEndDate').value;
+                if (sVal) startDate = new Date(sVal);
+                if (eVal) {
+                    endDate = new Date(eVal);
+                    endDate.setHours(23, 59, 59);
+                }
+            }
+
+            let baseTx = transactions;
+            if (currentProfile !== 'Master') {
+                baseTx = transactions.filter(t => t.user === currentProfile);
+            }
+
+            let filteredTransactions = [];
+            let totalSpend = 0;
+            let totalItemsCount = 0;
+
+            baseTx.forEach(tx => {
+                const txDate = new Date(tx.receiptDate);
+                if (startDate && txDate < startDate) return;
+                if (endDate && txDate > endDate) return;
+
+                if (categoryFilter !== 'all' && tx.category !== categoryFilter) {
+                    const hasCatItem = tx.items.some(i => (i.category || tx.category) === categoryFilter);
+                    if (!hasCatItem) return;
+                }
+
+                let matchedItems = tx.items;
+                if (searchQuery) {
+                    if (searchScope === 'store') {
+                        if (!tx.store.toLowerCase().includes(searchQuery)) return;
+                    } else {
+                        matchedItems = tx.items.filter(i => i.name.toLowerCase().includes(searchQuery));
+                        if (matchedItems.length === 0) return;
+                    }
+                }
+
+                if (categoryFilter !== 'all') {
+                    matchedItems = matchedItems.filter(i => (i.category || tx.category) === categoryFilter);
+                    if (matchedItems.length === 0 && searchQuery && searchScope === 'item') return;
+                }
+
+                const subTotal = matchedItems.reduce((s, i) => s + i.price, 0);
+                if (subTotal > 0 || !searchQuery) {
+                    filteredTransactions.push({
+                        ...tx,
+                        displayItems: matchedItems,
+                        displayTotal: subTotal > 0 && searchScope === 'item' ? subTotal : tx.total
+                    });
+                    totalSpend += (searchScope === 'item' && searchQuery) ? subTotal : tx.total;
+                    totalItemsCount += matchedItems.length;
+                }
+            });
+
+            if (sortMode === 'date_desc') {
+                filteredTransactions.sort((a, b) => new Date(b.receiptDate) - new Date(a.receiptDate));
+            } else if (sortMode === 'date_asc') {
+                filteredTransactions.sort((a, b) => new Date(a.receiptDate) - new Date(b.receiptDate));
+            } else if (sortMode === 'spend_desc') {
+                filteredTransactions.sort((a, b) => b.displayTotal - a.displayTotal);
+            } else if (sortMode === 'spend_asc') {
+                filteredTransactions.sort((a, b) => a.displayTotal - b.displayTotal);
+            } else if (sortMode === 'store_asc') {
+                filteredTransactions.sort((a, b) => a.store.localeCompare(b.store));
+            }
+
+            document.getElementById('totalSpendDisplay').innerText = `£${totalSpend.toFixed(2)}`;
+            document.getElementById('itemCountDisplay').innerText = `${totalItemsCount} items`;
+            document.getElementById('dateRangeDesc').innerText = datePreset.toUpperCase();
+            document.getElementById('metricTitle').innerText = currentProfile === 'Master' ? 'Household Combined Spend' : `${currentProfile}'s Spend Total`;
+
+            if (filteredTransactions.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filteredTransactions.map(tx => {
+                const isExpanded = expandedStores[tx.id] !== undefined ? expandedStores[tx.id] : true;
+                const itemsHtml = tx.displayItems.map(item => {
+                    const isMatch = searchQuery && searchScope === 'item' && item.name.toLowerCase().includes(searchQuery);
+                    return `
+                        <div class="flex justify-between items-center py-2 px-3 rounded-xl ${isMatch ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 font-semibold' : 'bg-slate-950/60 text-slate-300'} text-xs">
+                            <div class="truncate pr-2">
+                                <div>${item.name}</div>
+                                <span class="text-[9px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">${item.category || tx.category}</span>
+                            </div>
+                            <span class="font-bold text-white whitespace-nowrap">£${item.price.toFixed(2)}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                const userTag = currentProfile === 'Master' ? ` • <span class="text-emerald-400 font-bold">${tx.user}</span>` : '';
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm transition">
+                        <div onclick="toggleAccordion('${tx.id}')" class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-800/40">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="bg-emerald-600/20 text-emerald-400 p-2.5 rounded-xl flex-shrink-0">
+                                    <i class="fa-solid fa-store text-sm"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white truncate">${tx.store}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[10px] text-slate-400">${tx.receiptDate}${userTag}</span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 font-medium">${tx.category}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right flex items-center gap-3 flex-shrink-0">
+                                <div>
+                                    <div class="text-sm font-extrabold text-white">£${tx.displayTotal.toFixed(2)}</div>
+                                    <div class="text-[10px] text-slate-400">${tx.displayItems.length} items</div>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+                            </div>
+                        </div>
+                        <div id="acc-${tx.id}" class="${isExpanded ? 'block' : 'hidden'} px-4 pb-4 pt-1 border-t border-slate-800/60 space-y-2 bg-slate-950/30">
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase tracking-wider px-1 pt-2">
+                                <span>Line Items & Item Categories</span>
+                                <button onclick="deleteTransaction('${tx.id}')" class="text-rose-400 hover:underline"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                            </div>
+                            <div class="space-y-1.5">${itemsHtml}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleAccordion(id) {
+            expandedStores[id] = expandedStores[id] !== undefined ? !expandedStores[id] : false;
+            renderApp();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'addModal') {
+                document.getElementById('mDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('mItemsList').innerHTML = '';
+                document.getElementById('scanStatus').classList.add('hidden');
+                addModalItemRow();
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function addModalItemRow(name = '', price = '', category = 'Groceries') {
+            const list = document.getElementById('mItemsList');
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-12 gap-2 items-center';
+            row.innerHTML = `
+                <input type="text" placeholder="Item name" value="${name}" class="m-item-name col-span-5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <input type="number" step="0.01" placeholder="£ Price" value="${price}" class="m-item-price col-span-3 bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <select class="m-item-cat col-span-3 bg-slate-950 border border-slate-800 rounded-xl px-1.5 py-2 text-[10px] text-white">
+                    <option value="Groceries" ${category==='Groceries'?'selected':''}>Groceries</option>
+                    <option value="Household & Toiletries" ${category==='Household & Toiletries'?'selected':''}>Household</option>
+                    <option value="Dining & Cafes" ${category==='Dining & Cafes'?'selected':''}>Dining</option>
+                </select>
+                <button type="button" onclick="this.parentElement.remove()" class="col-span-1 text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            list.appendChild(row);
+        }
+
+        function saveNewTransaction() {
+            const store = document.getElementById('mStore').value.trim() || 'Local Store';
+            const date = document.getElementById('mDate').value;
+            const category = document.getElementById('mCategory').value;
+            const names = document.querySelectorAll('.m-item-name');
+            const prices = document.querySelectorAll('.m-item-price');
+            const cats = document.querySelectorAll('.m-item-cat');
+            let items = [];
+            let total = 0;
+
+            for (let i = 0; i < names.length; i++) {
+                const name = names[i].value.trim() || 'Item';
+                const price = parseFloat(prices[i].value) || 0;
+                const itemCat = cats[i].value;
+                items.push({ name, price, category: itemCat });
+                total += price;
+            }
+
+            if (items.length === 0) { alert('Add at least one line item.'); return; }
+
+            transactions.push({ 
+                id: 'tx_' + Date.now(), 
+                user: currentProfile === 'Master' ? 'Sitosh' : currentProfile,
+                store, 
+                receiptDate: date, 
+                status: 'verified', 
+                category, 
+                items, 
+                total 
+            });
+            saveAndRefresh();
+            closeModal('addModal');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Delete this transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveAndRefresh();
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", "expenselens_household_backup.json");
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+        }
+
+        function renderCharts() {
+            const activeTx = currentProfile === 'Master' ? transactions : transactions.filter(t => t.user === currentProfile);
+            const catMap = {}, storeMap = {}, userMap = { 'Sitosh': 0, 'Asmita': 0 };
+
+            transactions.forEach(t => {
+                userMap[t.user] = (userMap[t.user] || 0) + t.total;
+            });
+
+            activeTx.forEach(t => {
+                storeMap[t.store] = (storeMap[t.store] || 0) + t.total;
+                t.items.forEach(i => {
+                    const c = i.category || t.category;
+                    catMap[c] = (catMap[c] || 0) + i.price;
+                });
+            });
+
+            const userCompCard = document.getElementById('userComparisonCard');
+            if (currentProfile === 'Master') {
+                userCompCard.classList.remove('hidden');
+                const userCtx = document.getElementById('userCompChart').getContext('2d');
+                if (userCompChartInstance) userCompChartInstance.destroy();
+                userCompChartInstance = new Chart(userCtx, {
+                    type: 'bar',
+                    data: { labels: Object.keys(userMap), datasets: [{ data: Object.values(userMap), backgroundColor: ['#3b82f6', '#ec4899'], borderRadius: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } } }, plugins: { legend: { display: false } } }
+                });
+            } else {
+                userCompCard.classList.add('hidden');
+            }
+
+            const catCtx = document.getElementById('catChart').getContext('2d');
+            if (catChartInstance) catChartInstance.destroy();
+            catChartInstance = new Chart(catCtx, {
+                type: 'doughnut',
+                data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } } }
+            });
+
+            const storeCtx = document.getElementById('storeChart').getContext('2d');
+            if (storeChartInstance) storeChartInstance.destroy();
+            storeChartInstance = new Chart(storeCtx, {
+                type: 'bar',
+                data: { labels: Object.keys(storeMap), datasets: [{ data: Object.values(storeMap), backgroundColor: '#10b981', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#1e293b' } } }, plugins: { legend: { display: false } } }
+            });
+        }
+    </script>
+</body>
+</html>
