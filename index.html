@@ -104,7 +104,7 @@
             <button onclick="triggerCloudSync()" class="glass-pill text-blue-400 p-2.5 rounded-2xl text-xs shadow hover:bg-white/15 transition" title="Sync Status">
                 <i id="syncCloudIcon" class="fa-solid fa-cloud"></i>
             </button>
-            <button onclick="openModal('addModal')" id="addTxBtn" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/25">
+            <button onclick="openAddModal()" id="addTxBtn" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/25">
                 <i class="fa-solid fa-plus text-[10px]"></i> Add
             </button>
         </div>
@@ -156,14 +156,17 @@
                     <input type="date" id="customStartDate" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-1.5 text-white text-xs">
                     <input type="date" id="customEndDate" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-1.5 text-white text-xs">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <select id="categoryFilter" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                <div class="grid grid-cols-3 gap-2">
+                    <select id="categoryFilter" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-2 text-white text-[11px]">
                         <option value="all">All Categories</option>
                         <option value="Groceries">Groceries</option>
                         <option value="Household & Toiletries">Household & Toiletries</option>
                         <option value="Dining & Cafes">Dining & Cafes</option>
                     </select>
-                    <select id="sortSelect" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                    <select id="storeFilter" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-2 text-white text-[11px]">
+                        <option value="all">All Stores</option>
+                    </select>
+                    <select id="sortSelect" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-2 text-white text-[11px]">
                         <option value="date_desc">Newest First</option>
                         <option value="date_asc">Oldest First</option>
                         <option value="spend_desc">Most Spent</option>
@@ -340,7 +343,7 @@
             <i class="fa-solid fa-wallet text-base"></i>
             <span class="text-[10px] font-semibold mt-1">Ledger</span>
         </button>
-        <button onclick="openModal('addModal')" class="flex flex-col items-center text-slate-400 hover:text-white transition">
+        <button onclick="openAddModal()" class="flex flex-col items-center text-slate-400 hover:text-white transition">
             <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl -mt-6 border-4 border-slate-950 font-bold">
                 <i class="fa-solid fa-plus text-sm"></i>
             </div>
@@ -390,8 +393,9 @@
         <div class="glass-panel rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950/80">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-file-arrow-up text-emerald-400"></i> Add Receipt or Bank Line
+                    <i class="fa-solid fa-file-arrow-up text-emerald-400"></i> <span id="modalTitleText">Add Receipt or Bank Line</span>
                 </h3>
+                <input type="hidden" id="editingTxId" value="">
                 <button onclick="closeModal('addModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
             </div>
             <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
@@ -882,10 +886,24 @@
                 if (e) { endDate = new Date(e); endDate.setHours(23, 59, 59); }
             }
 
+            
             let baseTx = transactions;
             if (currentProfile !== 'Master') {
                 baseTx = transactions.filter(t => t.user === currentProfile || t.user === profiles[currentProfile].name || (currentProfile === 'user1' && t.user === 'Sitosh') || (currentProfile === 'user2' && t.user === 'Ashmita'));
             }
+
+            // Populate store filter dropdown dynamically based on baseTx stores
+            const storeSelect = document.getElementById('storeFilter');
+            const currentSelectedStore = storeSelect.value;
+            const uniqueStores = Array.from(new Set(baseTx.map(t => t.store))).sort();
+            storeSelect.innerHTML = '<option value="all">All Stores</option>' + uniqueStores.map(st => `<option value="${st}">${st}</option>`).join('');
+            if (uniqueStores.includes(currentSelectedStore)) {
+                storeSelect.value = currentSelectedStore;
+            } else {
+                storeSelect.value = 'all';
+            }
+            const storeFilterValue = storeSelect.value;
+
 
             let filteredTransactions = [];
             let totalSpend = 0;
@@ -898,6 +916,7 @@
                 if (categoryFilter !== 'all' && tx.category !== categoryFilter) {
                     if (!tx.items.some(i => (i.category || tx.category) === categoryFilter)) return;
                 }
+                if (storeFilterValue !== 'all' && tx.store !== storeFilterValue) return;
 
                 let matchedItems = tx.items;
                 if (searchQuery) {
@@ -967,7 +986,10 @@
                         <div id="acc-${tx.id}" class="${isExpanded ? 'block' : 'hidden'} px-4 pb-4 pt-1 border-t border-white/10 space-y-1.5 bg-slate-950/40">
                             <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase pt-2 pb-1">
                                 <span>Line Items</span>
-                                <button onclick="deleteTransaction('${tx.id}')" class="text-rose-400 hover:underline"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                                <div class="flex gap-3">
+                                    <button onclick="editTransaction('${tx.id}')" class="text-emerald-400 hover:underline"><i class="fa-solid fa-pen mr-1"></i> Edit</button>
+                                    <button onclick="deleteTransaction('${tx.id}')" class="text-rose-400 hover:underline"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                                </div>
                             </div>
                             ${itemsHtml}
                         </div>
@@ -1008,6 +1030,49 @@
             validateReceiptTotal();
         }
 
+        
+        function openAddModal() {
+            document.getElementById('editingTxId').value = '';
+            document.getElementById('modalTitleText').innerText = 'Add Receipt or Bank Line';
+            document.getElementById('mStore').value = '';
+            document.getElementById('mReceiptTotal').value = '';
+            document.getElementById('mDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('mItemsList').innerHTML = '';
+            addModalItemRow();
+            openModal('addModal');
+        }
+
+        function editTransaction(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+            document.getElementById('editingTxId').value = tx.id;
+            document.getElementById('modalTitleText').innerText = 'Edit Receipt Transaction';
+            document.getElementById('mStore').value = tx.store || '';
+            document.getElementById('mReceiptTotal').value = tx.total || '';
+            document.getElementById('mDate').value = tx.receiptDate || new Date().toISOString().split('T')[0];
+            document.getElementById('mCategory').value = tx.category || 'Groceries';
+            
+            const list = document.getElementById('mItemsList');
+            list.innerHTML = '';
+            if (tx.items && tx.items.length > 0) {
+                tx.items.forEach(item => {
+                    let qty = 1;
+                    let cleanName = item.name;
+                    const match = item.name.match(/\((\d+)x\)$/);
+                    if (match) {
+                        qty = parseInt(match[1]);
+                        cleanName = item.name.replace(/\s*\(\d+x\)$/, '').trim();
+                    }
+                    const unitPrice = qty > 0 ? (item.price / qty) : item.price;
+                    addModalItemRow(cleanName, qty, unitPrice.toFixed(2), item.category || tx.category);
+                });
+            } else {
+                addModalItemRow();
+            }
+            validateReceiptTotal();
+            openModal('addModal');
+        }
+
         function saveNewTransaction() {
             const store = document.getElementById('mStore').value.trim() || 'Local Store';
             const date = document.getElementById('mDate').value || new Date().toISOString().split('T')[0];
@@ -1028,7 +1093,22 @@
             if (items.length === 0) { alert('Add at least one item.'); return; }
             const receiptTotal = parseFloat(document.getElementById('mReceiptTotal').value) || total;
 
-            transactions.push({ id: 'tx_' + Date.now(), user: currentProfile, store, receiptDate: date, category, items, total: receiptTotal });
+            const editingId = document.getElementById('editingTxId').value;
+            if (editingId) {
+                const idx = transactions.findIndex(t => t.id === editingId);
+                if (idx !== -1) {
+                    transactions[idx] = {
+                        ...transactions[idx],
+                        store,
+                        receiptDate: date,
+                        category,
+                        items,
+                        total: receiptTotal
+                    };
+                }
+            } else {
+                transactions.push({ id: 'tx_' + Date.now(), user: currentProfile, store, receiptDate: date, category, items, total: receiptTotal });
+            }
             saveAndRefresh();
             closeModal('addModal');
         }
