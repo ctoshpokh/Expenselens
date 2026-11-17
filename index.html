@@ -619,6 +619,9 @@
 
             if (!sessionValid) {
                 openProfileSelector();
+            } else {
+                const savedTab = localStorage.getItem('expenselens_active_tab') || 'ledger';
+                switchNavTab(savedTab);
             }
         });
 
@@ -837,6 +840,7 @@
         }
 
         function switchNavTab(tab) {
+            localStorage.setItem('expenselens_active_tab', tab);
             const vLedger = document.getElementById('viewLedger');
             const vAnalytics = document.getElementById('viewAnalytics');
             const vSettings = document.getElementById('viewSettings');
@@ -889,7 +893,12 @@
             
             let baseTx = transactions;
             if (currentProfile !== 'Master') {
-                baseTx = transactions.filter(t => t.user === currentProfile || t.user === profiles[currentProfile].name || (currentProfile === 'user1' && t.user === 'Sitosh') || (currentProfile === 'user2' && t.user === 'Ashmita'));
+                const targetKey = currentProfile;
+                const targetName = profiles[currentProfile] ? profiles[currentProfile].name : '';
+                baseTx = transactions.filter(t => {
+                    const u = t.user || 'user1'; // default legacy to user1
+                    return u === targetKey || u === targetName || (targetKey === 'user1' && (u === 'Sitosh' || u === 'user1')) || (targetKey === 'user2' && (u === 'Ashmita' || u === 'user2'));
+                });
             }
 
             // Populate store filter dropdown dynamically based on baseTx stores
@@ -1127,7 +1136,7 @@
                     };
                 }
             } else {
-                transactions.push({ id: 'tx_' + Date.now(), user: currentProfile, store, receiptDate: date, category, items, total: receiptTotal });
+                transactions.push({ id: 'tx_' + Date.now(), user: currentProfile || 'user1', store, receiptDate: date, category, items, total: receiptTotal });
             }
             saveAndRefresh();
             closeModal('addModal');
@@ -1162,8 +1171,15 @@
             data.forEach(t => {
                 totalSpend += t.total;
                 storeMap[t.store] = (storeMap[t.store] || 0) + t.total;
-                let uname = t.user === 'user2' || t.user === profiles.user2.name ? profiles.user2.name : profiles.user1.name;
+                
+                let uname = profiles.user1.name;
+                if (t.user === 'user2' || t.user === profiles.user2.name) {
+                    uname = profiles.user2.name;
+                } else if (t.user === 'user1' || t.user === profiles.user1.name) {
+                    uname = profiles.user1.name;
+                }
                 userMap[uname] = (userMap[uname] || 0) + t.total;
+
                 dateMap[t.receiptDate] = (dateMap[t.receiptDate] || 0) + t.total;
                 t.items.forEach(i => { totalItems++; catMap[i.category || t.category] = (catMap[i.category || t.category] || 0) + i.price; });
             });
