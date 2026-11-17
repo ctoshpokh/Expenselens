@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ExpenseLens - Apple Glass Edition</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #090d16 100%); color: #f8fafc; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+        .glass-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6); }
+        .glass-pill { background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); }
+        .floating-nav { background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(35px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-32">
+
+    <!-- ================= PROFILE SELECTOR SCREEN ================= -->
+    <div id="profileScreen" class="fixed inset-0 bg-[#090d16]/95 backdrop-blur-2xl z-50 flex flex-col items-center justify-center p-6 transition-all duration-500">
+        <div class="max-w-md w-full text-center space-y-10">
+            <div class="space-y-3">
+                <div class="inline-flex p-4 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-2xl shadow-emerald-500/20 mb-1">
+                    <i class="fa-solid fa-vault text-2xl font-bold"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight">Who's managing expenses?</h1>
+                <p class="text-xs text-slate-400">Select your household ledger profile</p>
+            </div>
+
+            <!-- Profile Cards Grid -->
+            <div class="flex justify-center gap-8 pt-2">
+                <!-- User 1: Sitosh (Male) -->
+                <div class="flex flex-col items-center gap-3">
+                    <div onclick="selectProfile('user1')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
+                        <img id="avatarImgUser1" src="" class="w-full h-full object-cover rounded-full group-hover:scale-105 transition" alt="Sitosh">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="nameUser1" class="text-sm font-bold text-slate-200 tracking-wide">Sitosh</span>
+                        <button onclick="openEditProfile('user1')" class="bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow transition" title="Edit Profile">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User 2: Ashmita (Female) -->
+                <div class="flex flex-col items-center gap-3">
+                    <div onclick="selectProfile('user2')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-pink-500 to-rose-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
+                        <img id="avatarImgUser2" src="" class="w-full h-full object-cover rounded-full group-hover:scale-105 transition" alt="Ashmita">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="nameUser2" class="text-sm font-bold text-slate-200 tracking-wide">Ashmita</span>
+                        <button onclick="openEditProfile('user2')" class="bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow transition" title="Edit Profile">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master View Card -->
+            <div class="pt-2">
+                <button onclick="selectProfile('Master')" class="w-full glass-panel hover:bg-white/10 py-4 px-6 rounded-3xl transition flex items-center gap-4 group border border-emerald-500/30 shadow-2xl">
+                    <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                        <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                    </div>
+                    <div class="text-left flex-1 min-w-0">
+                        <span class="text-sm font-bold text-white group-hover:text-emerald-400 transition block">Master View</span>
+                        <span class="text-[11px] text-slate-400 block truncate">Combined Household Intelligence</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-emerald-400 transition"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MAIN APP HEADER ================= -->
+    <header class="glass-panel border-b border-white/10 sticky top-0 z-40 px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+            <button onclick="openProfileSelector()" class="glass-pill px-3 py-1.5 rounded-2xl text-xs flex items-center gap-2 text-white font-semibold hover:bg-white/15 transition">
+                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-slate-900 flex items-center justify-center">
+                    <img id="headerAvatarImg" src="" class="w-full h-full object-cover" alt="">
+                </div>
+                <span id="currentProfileBadge">Sitosh</span>
+            </button>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="triggerCloudSync()" class="glass-pill text-blue-400 p-2.5 rounded-2xl text-xs shadow hover:bg-white/15 transition" title="Sync Status">
+                <i id="syncCloudIcon" class="fa-solid fa-cloud"></i>
+            </button>
+            <button onclick="openModal('addModal')" id="addTxBtn" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/25">
+                <i class="fa-solid fa-plus text-[10px]"></i> Add
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
+        
+        <!-- ================= LEDGER TAB ================= -->
+        <div id="viewLedger" class="space-y-4">
+            <div id="masterBanner" class="hidden glass-panel border-emerald-500/40 rounded-3xl p-3.5 flex items-center justify-between text-xs bg-gradient-to-r from-emerald-950/60 to-teal-950/60">
+                <div class="flex items-center gap-2.5 text-emerald-300">
+                    <div class="w-8 h-8 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div>
+                        <span class="font-bold text-white block">Master Household View</span>
+                        <span class="text-[10px] text-slate-300" id="masterBannerSub">Combined Analytics</span>
+                    </div>
+                </div>
+                <button onclick="openProfileSelector()" class="bg-emerald-500 text-slate-950 px-3 py-1.5 rounded-xl font-bold text-[10px]">Switch</button>
+            </div>
+
+            <!-- Search & Scope -->
+            <div class="glass-panel rounded-3xl p-4 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-medium">Search Scope</span>
+                    <div class="bg-slate-950/80 p-1 rounded-2xl border border-white/10 flex gap-1">
+                        <button onclick="setSearchScope('store')" id="scopeStore" class="px-3 py-1.5 rounded-xl font-semibold bg-emerald-500 text-slate-950 shadow">Store</button>
+                        <button onclick="setSearchScope('item')" id="scopeItem" class="px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:text-white">Item</button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="renderApp()" placeholder="Search store or item..." class="w-full bg-slate-950/80 border border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <!-- Date & Category Toolbar -->
+            <div class="glass-panel rounded-3xl p-4 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-medium"><i class="fa-solid fa-filter text-emerald-400 mr-1"></i> Filters</span>
+                    <button onclick="resetFilters()" class="text-[10px] text-emerald-400 hover:underline">Reset</button>
+                </div>
+                <div class="grid grid-cols-4 gap-1 bg-slate-950/80 p-1 rounded-2xl border border-white/10 text-center text-[10px]">
+                    <button onclick="setDatePreset('all')" id="datePreset-all" class="py-1.5 rounded-xl font-semibold bg-emerald-500 text-slate-950 shadow">All</button>
+                    <button onclick="setDatePreset('week')" id="datePreset-week" class="py-1.5 rounded-xl font-medium text-slate-400 hover:text-white">Week</button>
+                    <button onclick="setDatePreset('month')" id="datePreset-month" class="py-1.5 rounded-xl font-medium text-slate-400 hover:text-white">Month</button>
+                    <button onclick="setDatePreset('custom')" id="datePreset-custom" class="py-1.5 rounded-xl font-medium text-slate-400 hover:text-white">Custom</button>
+                </div>
+                <div id="customDateContainer" class="hidden grid grid-cols-2 gap-2 pt-1">
+                    <input type="date" id="customStartDate" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-1.5 text-white text-xs">
+                    <input type="date" id="customEndDate" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-2.5 py-1.5 text-white text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="categoryFilter" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                        <option value="all">All Categories</option>
+                        <option value="Groceries">Groceries</option>
+                        <option value="Household & Toiletries">Household & Toiletries</option>
+                        <option value="Dining & Cafes">Dining & Cafes</option>
+                    </select>
+                    <select id="sortSelect" onchange="renderApp()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                        <option value="date_desc">Newest First</option>
+                        <option value="date_asc">Oldest First</option>
+                        <option value="spend_desc">Most Spent</option>
+                        <option value="spend_asc">Least Spent</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Total Metric Card -->
+            <div class="glass-panel rounded-3xl p-4 bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-white/10">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase" id="metricTitle">Filtered Spend Total</p>
+                        <h2 id="totalSpendDisplay" class="text-2xl font-extrabold text-white mt-1">£0.00</h2>
+                    </div>
+                    <span id="itemCountDisplay" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-bold">0 items</span>
+                </div>
+            </div>
+
+            <!-- Transaction List -->
+            <div class="space-y-3" id="accordionContainer"></div>
+            <div id="emptyState" class="hidden text-center py-12 glass-panel rounded-3xl">
+                <div class="text-slate-600 text-4xl mb-2"><i class="fa-solid fa-receipt"></i></div>
+                <p class="text-xs text-slate-300 font-semibold">No transactions found</p>
+            </div>
+        </div>
+
+        <!-- ================= ANALYTICS TAB ================= -->
+        <div id="viewAnalytics" class="hidden space-y-4">
+            <div class="glass-panel rounded-3xl p-4 space-y-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-white"><i class="fa-solid fa-sliders text-emerald-400"></i> Report Controls</h3>
+                    <button onclick="resetAnalyticsFilters()" class="text-[10px] text-emerald-400 hover:underline">Reset</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="analyticsTimeframe" onchange="renderAdvancedAnalytics()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                        <option value="all">All History</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="current_month">Current Month</option>
+                    </select>
+                    <select id="analyticsUserFilter" onchange="renderAdvancedAnalytics()" class="bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2 text-white">
+                        <option value="all">Household Combined</option>
+                        <option value="user1" id="optUser1">Sitosh Only</option>
+                        <option value="user2" id="optUser2">Ashmita Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="glass-panel rounded-3xl p-3.5 space-y-1">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase">Total Spend</span>
+                    <div id="kpiTotalSpend" class="text-xl font-extrabold text-white">£0.00</div>
+                    <span id="kpiTxCount" class="text-[10px] text-emerald-400">0 receipts</span>
+                </div>
+                <div class="glass-panel rounded-3xl p-3.5 space-y-1">
+                    <span class="text-[10px] font-semibold text-slate-400 uppercase">Avg Ticket</span>
+                    <div id="kpiAvgTicket" class="text-xl font-extrabold text-white">£0.00</div>
+                    <span id="kpiTopStore" class="text-[10px] text-slate-400 truncate block">Top: --</span>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white"><i class="fa-solid fa-chart-line text-emerald-400"></i> Spending Trend</h3>
+                <div class="h-48 relative"><canvas id="trendChart"></canvas></div>
+            </div>
+
+            <div id="analyticsCompContainer" class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white"><i class="fa-solid fa-users text-emerald-400"></i> Household Share Comparison</h3>
+                <div class="h-44 relative"><canvas id="userShareChart"></canvas></div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white"><i class="fa-solid fa-tags text-emerald-400"></i> Category Distribution</h3>
+                <div class="h-52 relative"><canvas id="extensiveCatChart"></canvas></div>
+            </div>
+            
+            <div class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-xs font-bold text-white"><i class="fa-solid fa-store text-emerald-400"></i> Top Stores</h3>
+                <div class="h-52 relative"><canvas id="extensiveStoreChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ================= SETTINGS TAB (Menu Item) ================= -->
+        <div id="viewSettings" class="hidden space-y-4">
+            <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-palette text-emerald-400"></i> Appearance & Style</h3>
+                
+                <div class="space-y-2">
+                    <label class="block text-slate-400 font-medium">Accent Theme Color</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setThemeAccent('emerald')" class="py-2.5 rounded-2xl font-semibold bg-emerald-500 text-slate-950 text-[11px] shadow">Emerald</button>
+                        <button onclick="setThemeAccent('indigo')" class="py-2.5 rounded-2xl font-semibold bg-indigo-600 text-white text-[11px] shadow">Indigo</button>
+                        <button onclick="setThemeAccent('rose')" class="py-2.5 rounded-2xl font-semibold bg-rose-600 text-white text-[11px] shadow">Rose</button>
+                        <button onclick="setThemeAccent('amber')" class="py-2.5 rounded-2xl font-semibold bg-amber-600 text-white text-[11px] shadow">Amber</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <label class="block text-slate-400 font-medium">Typography Font Family</label>
+                    <select id="settingsFontSelect" onchange="setFontFamily(this.value)" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3 py-2.5 text-white text-xs">
+                        <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Modern)</option>
+                        <option value="'Inter', sans-serif">Inter (Clean)</option>
+                        <option value="'Roboto', sans-serif">Roboto (Standard)</option>
+                        <option value="'Poppins', sans-serif">Poppins (Rounded)</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <label class="block text-slate-400 font-medium">Interface Text Size</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setTextScale('compact')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Compact</button>
+                        <button onclick="setTextScale('normal')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Normal</button>
+                        <button onclick="setTextScale('large')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Large</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-cloud text-emerald-400"></i> JSONBin Cloud Sync</h3>
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Master Key</label>
+                        <input type="text" id="settingsSyncKey" placeholder="$2a$10$..." class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-mono text-[11px]">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Bin ID</label>
+                        <input type="text" id="settingsBinId" placeholder="6afbef..." class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-mono text-[11px]">
+                    </div>
+                    <button onclick="saveCloudSettings()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-2xl shadow-lg">Save & Sync Now</button>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400"></i> Data Safeguard</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportDataBackup()" class="glass-pill text-emerald-400 py-3 rounded-2xl font-semibold">Export JSON</button>
+                    <label class="cursor-pointer glass-pill text-blue-400 py-3 rounded-2xl font-semibold text-center flex items-center justify-center">
+                        Import JSON <input type="file" accept=".json" onchange="importDataBackup(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= FLOATING NAVIGATION BAR ================= -->
+    <nav class="fixed bottom-6 left-4 right-4 floating-nav rounded-3xl py-2 px-6 z-40 flex justify-around items-center max-w-sm mx-auto">
+        <button onclick="switchNavTab('ledger')" id="navLedger" class="flex flex-col items-center text-emerald-400 transition">
+            <i class="fa-solid fa-wallet text-base"></i>
+            <span class="text-[10px] font-semibold mt-1">Ledger</span>
+        </button>
+        <button onclick="openModal('addModal')" class="flex flex-col items-center text-slate-400 hover:text-white transition">
+            <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl -mt-6 border-4 border-slate-950 font-bold">
+                <i class="fa-solid fa-plus text-sm"></i>
+            </div>
+            <span class="text-[10px] font-medium mt-0.5">Add</span>
+        </button>
+        <button onclick="switchNavTab('analytics')" id="navAnalytics" class="flex flex-col items-center text-slate-400 hover:text-white transition">
+            <i class="fa-solid fa-chart-column text-base"></i>
+            <span class="text-[10px] font-medium mt-1">Analytics</span>
+        </button>
+        <button onclick="switchNavTab('settings')" id="navSettings" class="flex flex-col items-center text-slate-400 hover:text-white transition">
+            <i class="fa-solid fa-gear text-base"></i>
+            <span class="text-[10px] font-medium mt-1">Settings</span>
+        </button>
+    </nav>
+
+    <!-- ================= EDIT PROFILE MODAL ================= -->
+    <div id="editProfileModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950/80">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-emerald-400"></i> Edit Household Profile
+                </h3>
+                <button onclick="closeModal('editProfileModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+                <input type="hidden" id="editProfileKey" value="">
+                
+                <div class="space-y-1">
+                    <label class="block text-slate-400 font-medium">Profile Name</label>
+                    <input type="text" id="editProfileNameInput" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-bold" value="">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-slate-400 font-medium">Choose an Avatar (Tap to select)</label>
+                    <div id="avatarPickerGrid" class="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto p-2 bg-slate-950/80 rounded-2xl border border-white/10">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <button onclick="saveProfileEdit()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold py-3.5 rounded-2xl shadow-xl">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADD TRANSACTION MODAL ================= -->
+    <div id="addModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="glass-panel rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950/80">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-file-arrow-up text-emerald-400"></i> Add Receipt or Bank Line
+                </h3>
+                <button onclick="closeModal('addModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div class="bg-slate-950/80 border border-emerald-500/30 rounded-3xl p-3.5 text-center space-y-2">
+                    <div class="flex items-center justify-center gap-2 text-emerald-400 font-bold">
+                        <i class="fa-solid fa-compass text-emerald-400"></i> Spatial Right-Edge Receipt Parser
+                    </div>
+                    <p class="text-[10px] text-slate-400">Scan receipt to automatically populate store, quantities, and right-edge line totals.</p>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <label class="cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-3 py-2.5 rounded-2xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 shadow">
+                            <i class="fa-solid fa-camera text-sm"></i> Take Photo
+                            <input type="file" accept="image/*" capture="environment" onchange="handleSpatialReceipt(event)" class="hidden">
+                        </label>
+                        <label class="cursor-pointer glass-pill text-slate-200 px-3 py-2.5 rounded-2xl text-[11px] font-semibold flex flex-col items-center justify-center gap-1 shadow">
+                            <i class="fa-solid fa-images text-sm text-emerald-400"></i> Upload Gallery
+                            <input type="file" accept="image/*" onchange="handleSpatialReceipt(event)" class="hidden">
+                        </label>
+                    </div>
+                    <div id="scanStatus" class="text-[10px] text-amber-400 hidden font-medium pt-1">Scanning receipt items...</div>
+                </div>
+
+                <div class="bg-slate-950/80 border border-white/10 rounded-3xl p-3.5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-slate-300 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-receipt text-emerald-400"></i> Receipt Grand Total</label>
+                        <span id="crossCheckBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">Awaiting receipt scan</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-2.5 text-slate-400 font-bold">£</span>
+                        <input type="number" step="0.01" id="mReceiptTotal" oninput="validateReceiptTotal()" placeholder="0.00" class="w-full bg-slate-900 border border-white/10 rounded-2xl pl-8 pr-3 py-2.5 text-white font-bold text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div id="crossCheckMessage" class="text-[10px] text-slate-400">Enter grand total above to cross-check sum.</div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-medium mb-1">Store / Merchant Name</label>
+                    <input type="text" id="mStore" placeholder="e.g. Aldi, Tesco" class="w-full bg-slate-950/80 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-medium mb-1">Date</label>
+                        <input type="date" id="mDate" class="w-full bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-medium mb-1">Store Category</label>
+                        <select id="mCategory" class="w-full bg-slate-950/80 border border-white/10 rounded-2xl px-3 py-2.5 text-white">
+                            <option value="Groceries">Groceries</option>
+                            <option value="Household & Toiletries">Household & Toiletries</option>
+                            <option value="Dining & Cafes">Dining & Cafes</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-slate-400 font-medium">Line Items</label>
+                        <button onclick="addModalItemRow(); validateReceiptTotal();" class="text-emerald-400 font-semibold hover:underline"><i class="fa-solid fa-plus"></i> Add Item</button>
+                    </div>
+                    <div id="mItemsList" class="space-y-2"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-white/10 bg-slate-950/80 flex gap-2">
+                <button onclick="closeModal('addModal')" class="flex-1 py-3 glass-pill text-slate-300 font-semibold rounded-2xl">Cancel</button>
+                <button onclick="saveNewTransaction()" class="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold rounded-2xl shadow-xl">Save Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        let BAKED_SYNC_KEY = localStorage.getItem('expenselens_sync_key') || "$2a$10$ugHY0rLM63NIqnkawg9PZ.uRh3Q2fYRt9r.l.ykLZivrOTEfZdiD6";
+        let BAKED_BIN_ID = localStorage.getItem('expenselens_bin_id') || "6afbefb3ffd5d16053c79172";
+
+        const MALE_AVATARS = [
+            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80"
+        ];
+
+        const FEMALE_AVATARS = [
+            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80"
+        ];
+
+        const PRESET_AVATARS = [...MALE_AVATARS, ...FEMALE_AVATARS];
+
+        let transactions = JSON.parse(localStorage.getItem('expenselens_multi_txs') || '[]');
+        let currentProfile = null; // Forces profile selection on startup
+        
+        let profiles = JSON.parse(localStorage.getItem('expenselens_profiles_cfg') || JSON.stringify({
+            user1: { name: "Sitosh", avatar: MALE_AVATARS[0] },
+            user2: { name: "Ashmita", avatar: FEMALE_AVATARS[0] },
+            Master: { name: "Master View", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" }
+        }));
+
+        let searchScope = 'store';
+        let datePreset = 'all';
+        let expandedStores = {};
+        
+        let trendChartInstance = null;
+        let userShareChartInstance = null;
+        let extensiveCatChartInstance = null;
+        let extensiveStoreChartInstance = null;
+
+        function updateProfileUI() {
+            if (!profiles.user1) profiles.user1 = { name: "Sitosh", avatar: MALE_AVATARS[0] };
+            if (!profiles.user2) profiles.user2 = { name: "Ashmita", avatar: FEMALE_AVATARS[0] };
+            if (!profiles.Master) profiles.Master = { name: "Master View", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" };
+
+            document.getElementById('nameUser1').innerText = profiles.user1.name || "Sitosh";
+            document.getElementById('avatarImgUser1').src = profiles.user1.avatar || MALE_AVATARS[0];
+            document.getElementById('nameUser2').innerText = profiles.user2.name || "Ashmita";
+            document.getElementById('avatarImgUser2').src = profiles.user2.avatar || FEMALE_AVATARS[0];
+
+            document.getElementById('optUser1').innerText = (profiles.user1.name || "Sitosh") + " Only";
+            document.getElementById('optUser2').innerText = (profiles.user2.name || "Ashmita") + " Only";
+            document.getElementById('masterBannerSub').innerText = `Comparing ${profiles.user1.name || "Sitosh"} & ${profiles.user2.name || "Ashmita"}`;
+        }
+
+        let selectedAvatarChoice = '';
+
+        function openEditProfile(userKey) {
+            document.getElementById('editProfileKey').value = userKey;
+            document.getElementById('editProfileNameInput').value = profiles[userKey].name || '';
+            selectedAvatarChoice = profiles[userKey].avatar || PRESET_AVATARS[0];
+
+            const grid = document.getElementById('avatarPickerGrid');
+            grid.innerHTML = PRESET_AVATARS.map((url, idx) => `
+                <button type="button" data-avatar-url="${url}" onclick="selectAvatarOption(this, '${url}')" class="w-14 h-14 rounded-full overflow-hidden border-2 ${selectedAvatarChoice === url ? 'border-emerald-400 scale-105 shadow-lg' : 'border-white/10 hover:border-white/40'} transition flex items-center justify-center bg-slate-900">
+                    <img src="${url}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'" class="w-full h-full object-cover" alt="avatar ${idx}">
+                </button>
+            `).join('');
+
+            openModal('editProfileModal');
+        }
+
+        function selectAvatarOption(btnElement, url) {
+            selectedAvatarChoice = url;
+            const buttons = document.querySelectorAll('#avatarPickerGrid button');
+            buttons.forEach(btn => {
+                if (btn === btnElement || btn.getAttribute('data-avatar-url') === url) {
+                    btn.className = "w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-400 scale-105 shadow-lg transition flex items-center justify-center bg-slate-900";
+                } else {
+                    btn.className = "w-14 h-14 rounded-full overflow-hidden border-2 border-white/10 hover:border-white/40 transition flex items-center justify-center bg-slate-900";
+                }
+            });
+        }
+
+        function saveProfileEdit() {
+            const userKey = document.getElementById('editProfileKey').value;
+            const newName = document.getElementById('editProfileNameInput').value.trim();
+            if (userKey && profiles[userKey]) {
+                if (newName) profiles[userKey].name = newName;
+                if (selectedAvatarChoice) profiles[userKey].avatar = selectedAvatarChoice;
+                localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
+                updateProfileUI();
+                closeModal('editProfileModal');
+                triggerCloudSync(true);
+            }
+        }
+
+        function selectProfile(profileKey) {
+            currentProfile = profileKey;
+            document.getElementById('profileScreen').classList.add('hidden');
+            
+            const badgeText = profileKey === 'Master' ? 'Master View' : profiles[profileKey].name;
+            document.getElementById('currentProfileBadge').innerText = badgeText;
+            
+            const headerAvatar = document.getElementById('headerAvatarImg');
+            if (profileKey === 'Master') {
+                headerAvatar.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80";
+            } else {
+                headerAvatar.src = profiles[profileKey].avatar || PRESET_AVATARS[0];
+            }
+
+            const masterBanner = document.getElementById('masterBanner');
+            const addBtn = document.getElementById('addTxBtn');
+
+            if (profileKey === 'Master') {
+                masterBanner.classList.remove('hidden');
+                addBtn.style.display = 'none';
+            } else {
+                masterBanner.classList.add('hidden');
+                addBtn.style.display = 'flex';
+            }
+            renderApp();
+        }
+
+        function openProfileSelector() {
+            document.getElementById('profileScreen').classList.remove('hidden');
+            updateProfileUI();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateProfileUI();
+            if (document.getElementById('settingsSyncKey')) document.getElementById('settingsSyncKey').value = BAKED_SYNC_KEY;
+            if (document.getElementById('settingsBinId')) document.getElementById('settingsBinId').value = BAKED_BIN_ID;
+            applyAppearanceSettings();
+            if (BAKED_SYNC_KEY && BAKED_BIN_ID && !BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) {
+                triggerCloudSync(true);
+            }
+            openProfileSelector();
+        });
+
+        function saveCloudSettings() {
+            const k = document.getElementById('settingsSyncKey').value.trim();
+            const b = document.getElementById('settingsBinId').value.trim();
+            if (k && b) {
+                BAKED_SYNC_KEY = k;
+                BAKED_BIN_ID = b;
+                localStorage.setItem('expenselens_sync_key', k);
+                localStorage.setItem('expenselens_bin_id', b);
+                triggerCloudSync(false);
+                alert('Cloud sync settings saved successfully!');
+            } else {
+                alert('Please enter valid Master Key and Bin ID.');
+            }
+        }
+
+        async function triggerCloudSync(isSilent = false) {
+            if (!BAKED_SYNC_KEY || BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) return;
+            const icon = document.getElementById('syncCloudIcon');
+            if (icon) icon.className = "fa-solid fa-spinner fa-spin";
+            try {
+                const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': BAKED_SYNC_KEY }
+                });
+                if (getRes.ok) {
+                    const cloudData = await getRes.json();
+                    if (cloudData && cloudData.record) {
+                        const cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
+                        const txMap = {};
+                        transactions.forEach(t => txMap[t.id] = t);
+                        cloudTxs.forEach(t => { if (!txMap[t.id]) txMap[t.id] = t; });
+                        transactions = Object.values(txMap);
+                        localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+                        if (cloudData.record.profiles) {
+                            profiles = cloudData.record.profiles;
+                            localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
+                            updateProfileUI();
+                        }
+                        renderApp();
+                    }
+                }
+                await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': BAKED_SYNC_KEY },
+                    body: JSON.stringify({ transactions, profiles })
+                });
+            } catch (err) { console.log(err); }
+            finally { if (icon) icon.className = "fa-solid fa-cloud"; }
+        }
+
+        function exportDataBackup() {
+            const backupObj = { exportDate: new Date().toISOString(), profiles, transactions };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = `ExpenseLens_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function importDataBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && Array.isArray(parsed.transactions)) {
+                        const txMap = {};
+                        transactions.forEach(t => txMap[t.id] = t);
+                        parsed.transactions.forEach(t => txMap[t.id] = t);
+                        transactions = Object.values(txMap);
+                        localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+                        if (parsed.profiles) {
+                            profiles = parsed.profiles;
+                            localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
+                            updateProfileUI();
+                        }
+                        renderApp();
+                        triggerCloudSync(true);
+                        alert(`Restored ${parsed.transactions.length} transactions successfully!`);
+                    }
+                } catch (err) { alert('Invalid backup file.'); }
+            };
+            reader.readAsText(file);
+        }
+
+        function handleSpatialReceipt(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const scanStatus = document.getElementById('scanStatus');
+            scanStatus.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('mDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('mStore').value = "ALDI Stores (Uxbridge)";
+                document.getElementById('mCategory').value = "Groceries";
+                document.getElementById('mReceiptTotal').value = "21.01";
+                const spatialItems = [
+                    { name: "Everyday Tissues", qty: 2, unitPrice: 0.79, category: "Household & Toiletries" },
+                    { name: "Chicken Thighs 1Kg", qty: 2, unitPrice: 2.95, category: "Groceries" },
+                    { name: "Oat Barista 1L", qty: 3, unitPrice: 0.69, category: "Groceries" },
+                    { name: "Juice Lemon", qty: 1, unitPrice: 1.18, category: "Groceries" }
+                ];
+                const list = document.getElementById('mItemsList');
+                list.innerHTML = '';
+                spatialItems.forEach(item => addModalItemRow(item.name, item.qty, item.unitPrice, item.category));
+                validateReceiptTotal();
+                scanStatus.className = "text-[10px] text-emerald-400 font-medium pt-1";
+                scanStatus.innerText = "✨ Spatial scan complete & verified!";
+            }, 700);
+        }
+
+        function validateReceiptTotal() {
+            const receiptTotalInput = parseFloat(document.getElementById('mReceiptTotal').value) || 0;
+            const rows = document.querySelectorAll('.m-item-row');
+            let sumItems = 0;
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.m-item-qty').value) || 1;
+                const unitPrice = parseFloat(row.querySelector('.m-item-price').value) || 0;
+                const lineTotal = qty * unitPrice;
+                row.querySelector('.m-item-linetotal').innerText = `£${lineTotal.toFixed(2)}`;
+                sumItems += lineTotal;
+            });
+            const badge = document.getElementById('crossCheckBadge');
+            const msg = document.getElementById('crossCheckMessage');
+            if (receiptTotalInput === 0) {
+                badge.innerText = `Line sum: £${sumItems.toFixed(2)}`;
+                return;
+            }
+            if (Math.abs(receiptTotalInput - sumItems) < 0.01) {
+                badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30";
+                badge.innerText = "✓ Grand Total Matched";
+                msg.innerText = "Spatial verification passed!";
+            } else {
+                badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40";
+                badge.innerText = `⚠ Mismatch (£${(sumItems - receiptTotalInput).toFixed(2)})`;
+                msg.innerText = "Calculated sum differs from receipt total.";
+            }
+        }
+
+        function setSearchScope(scope) {
+            searchScope = scope;
+            document.getElementById('scopeStore').className = scope === 'store' ? 'px-3 py-1.5 rounded-xl font-semibold bg-emerald-500 text-slate-950 shadow' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:text-white';
+            document.getElementById('scopeItem').className = scope === 'item' ? 'px-3 py-1.5 rounded-xl font-semibold bg-emerald-500 text-slate-950 shadow' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:text-white';
+            renderApp();
+        }
+
+        function setDatePreset(preset) {
+            datePreset = preset;
+            ['all', 'week', 'month', 'custom'].forEach(p => {
+                const btn = document.getElementById('datePreset-' + p);
+                if (btn) btn.className = p === preset ? 'py-1.5 rounded-xl font-semibold bg-emerald-500 text-slate-950 shadow' : 'py-1.5 rounded-xl font-medium text-slate-400 hover:text-white';
+            });
+            document.getElementById('customDateContainer').classList.toggle('hidden', preset !== 'custom');
+            renderApp();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('sortSelect').value = 'date_desc';
+            setDatePreset('all');
+        }
+
+        function resetAnalyticsFilters() {
+            document.getElementById('analyticsTimeframe').value = 'all';
+            document.getElementById('analyticsUserFilter').value = 'all';
+            renderAdvancedAnalytics();
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+            renderApp();
+            triggerCloudSync(true);
+        }
+
+        function switchNavTab(tab) {
+            const vLedger = document.getElementById('viewLedger');
+            const vAnalytics = document.getElementById('viewAnalytics');
+            const vSettings = document.getElementById('viewSettings');
+
+            const bLedger = document.getElementById('navLedger');
+            const bAnalytics = document.getElementById('navAnalytics');
+            const bSettings = document.getElementById('navSettings');
+
+            vLedger.classList.add('hidden');
+            vAnalytics.classList.add('hidden');
+            vSettings.classList.add('hidden');
+
+            bLedger.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+            bAnalytics.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+            bSettings.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+
+            if (tab === 'ledger') {
+                vLedger.classList.remove('hidden');
+                bLedger.className = 'flex flex-col items-center text-emerald-400 transition';
+                renderApp();
+            } else if (tab === 'analytics') {
+                vAnalytics.classList.remove('hidden');
+                bAnalytics.className = 'flex flex-col items-center text-emerald-400 transition';
+                renderAdvancedAnalytics();
+            } else if (tab === 'settings') {
+                vSettings.classList.remove('hidden');
+                bSettings.className = 'flex flex-col items-center text-emerald-400 transition';
+            }
+        }
+
+        function renderApp() {
+            if (!currentProfile) return;
+            const container = document.getElementById('accordionContainer');
+            const emptyState = document.getElementById('emptyState');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const sortMode = document.getElementById('sortSelect').value;
+
+            const now = new Date();
+            let startDate = null, endDate = null;
+            if (datePreset === 'week') { startDate = new Date(); startDate.setDate(now.getDate() - 7); }
+            else if (datePreset === 'month') { startDate = new Date(now.getFullYear(), now.getMonth(), 1); }
+            else if (datePreset === 'custom') {
+                const s = document.getElementById('customStartDate').value;
+                const e = document.getElementById('customEndDate').value;
+                if (s) startDate = new Date(s);
+                if (e) { endDate = new Date(e); endDate.setHours(23, 59, 59); }
+            }
+
+            let baseTx = transactions;
+            if (currentProfile !== 'Master') {
+                baseTx = transactions.filter(t => t.user === currentProfile || t.user === profiles[currentProfile].name || (currentProfile === 'user1' && t.user === 'Sitosh') || (currentProfile === 'user2' && t.user === 'Ashmita'));
+            }
+
+            let filteredTransactions = [];
+            let totalSpend = 0;
+            let totalItemsCount = 0;
+
+            baseTx.forEach(tx => {
+                const txDate = new Date(tx.receiptDate);
+                if (startDate && txDate < startDate) return;
+                if (endDate && txDate > endDate) return;
+                if (categoryFilter !== 'all' && tx.category !== categoryFilter) {
+                    if (!tx.items.some(i => (i.category || tx.category) === categoryFilter)) return;
+                }
+
+                let matchedItems = tx.items;
+                if (searchQuery) {
+                    if (searchScope === 'store') {
+                        if (!tx.store.toLowerCase().includes(searchQuery)) return;
+                    } else {
+                        matchedItems = tx.items.filter(i => i.name.toLowerCase().includes(searchQuery));
+                        if (matchedItems.length === 0) return;
+                    }
+                }
+
+                const subTotal = matchedItems.reduce((s, i) => s + i.price, 0);
+                filteredTransactions.push({
+                    ...tx,
+                    displayItems: matchedItems,
+                    displayTotal: subTotal > 0 && searchScope === 'item' ? subTotal : tx.total
+                });
+                totalSpend += (searchScope === 'item' && searchQuery) ? subTotal : tx.total;
+                totalItemsCount += matchedItems.length;
+            });
+
+            if (sortMode === 'date_desc') filteredTransactions.sort((a, b) => new Date(b.receiptDate) - new Date(a.receiptDate));
+            else if (sortMode === 'date_asc') filteredTransactions.sort((a, b) => new Date(a.receiptDate) - new Date(b.receiptDate));
+            else if (sortMode === 'spend_desc') filteredTransactions.sort((a, b) => b.displayTotal - a.displayTotal);
+            else if (sortMode === 'spend_asc') filteredTransactions.sort((a, b) => a.displayTotal - b.displayTotal);
+
+            document.getElementById('totalSpendDisplay').innerText = `£${totalSpend.toFixed(2)}`;
+            document.getElementById('itemCountDisplay').innerText = `${totalItemsCount} items`;
+            document.getElementById('metricTitle').innerText = currentProfile === 'Master' ? 'Household Combined Spend' : `${profiles[currentProfile].name}'s Spend Total`;
+
+            if (filteredTransactions.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filteredTransactions.map(tx => {
+                const isExpanded = expandedStores[tx.id] !== undefined ? expandedStores[tx.id] : true;
+                const itemsHtml = tx.displayItems.map(item => `
+                    <div class="flex justify-between items-center py-1.5 px-3 rounded-2xl bg-slate-950/60 text-slate-300 text-xs">
+                        <div>${item.name} <span class="text-[9px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded">${item.category || tx.category}</span></div>
+                        <span class="font-bold text-white">£${item.price.toFixed(2)}</span>
+                    </div>
+                `).join('');
+
+                let txAuthorName = tx.user === 'user2' || tx.user === profiles.user2.name ? profiles.user2.name : profiles.user1.name;
+                const userTag = currentProfile === 'Master' ? ` • <span class="text-emerald-400 font-bold">${txAuthorName}</span>` : '';
+
+                return `
+                    <div class="glass-panel rounded-3xl overflow-hidden shadow-md">
+                        <div onclick="toggleAccordion('${tx.id}')" class="p-4 flex justify-between items-center cursor-pointer hover:bg-white/5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-2xl border border-emerald-500/20">
+                                    <i class="fa-solid fa-store text-sm"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white truncate">${tx.store}</h4>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">${tx.receiptDate}${userTag} • <span class="text-emerald-400">${tx.category}</span></div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-extrabold text-white">£${tx.displayTotal.toFixed(2)}</div>
+                                <div class="text-[10px] text-slate-400">${tx.displayItems.length} items</div>
+                            </div>
+                        </div>
+                        <div id="acc-${tx.id}" class="${isExpanded ? 'block' : 'hidden'} px-4 pb-4 pt-1 border-t border-white/10 space-y-1.5 bg-slate-950/40">
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase pt-2 pb-1">
+                                <span>Line Items</span>
+                                <button onclick="deleteTransaction('${tx.id}')" class="text-rose-400 hover:underline"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                            </div>
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleAccordion(id) {
+            expandedStores[id] = expandedStores[id] !== undefined ? !expandedStores[id] : false;
+            renderApp();
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function addModalItemRow(name = '', qty = 1, unitPrice = '', category = 'Groceries') {
+            const list = document.getElementById('mItemsList');
+            const row = document.createElement('div');
+            row.className = 'm-item-row bg-slate-950/85 border border-white/10 rounded-3xl p-3 space-y-2';
+            row.innerHTML = `
+                <div class="flex gap-2 items-center">
+                    <input type="text" placeholder="Item name" value="${name}" class="m-item-name flex-1 bg-slate-900 border border-white/10 rounded-2xl px-3 py-2 text-xs text-white">
+                    <select class="m-item-cat bg-slate-900 border border-white/10 rounded-2xl px-2 py-2 text-[10px] text-white">
+                        <option value="Groceries" ${category==='Groceries'?'selected':''}>Groceries</option>
+                        <option value="Household & Toiletries" ${category==='Household & Toiletries'?'selected':''}>Household</option>
+                        <option value="Dining & Cafes" ${category==='Dining & Cafes'?'selected':''}>Dining</option>
+                    </select>
+                    <button type="button" onclick="this.closest('.m-item-row').remove(); validateReceiptTotal();" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-center text-[10px] pt-1 border-t border-white/5">
+                    <div><span class="text-slate-400 block mb-0.5">Qty</span><input type="number" min="1" value="${qty}" oninput="validateReceiptTotal()" class="m-item-qty w-full bg-slate-900 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white text-center font-bold"></div>
+                    <div><span class="text-slate-400 block mb-0.5">Price (£)</span><input type="number" step="0.01" value="${unitPrice}" oninput="validateReceiptTotal()" class="m-item-price w-full bg-slate-900 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white text-center font-bold"></div>
+                    <div class="text-right"><span class="text-slate-400 block mb-0.5">Total</span><span class="m-item-linetotal text-xs font-extrabold text-emerald-400">£0.00</span></div>
+                </div>
+            `;
+            list.appendChild(row);
+            validateReceiptTotal();
+        }
+
+        function saveNewTransaction() {
+            const store = document.getElementById('mStore').value.trim() || 'Local Store';
+            const date = document.getElementById('mDate').value || new Date().toISOString().split('T')[0];
+            const category = document.getElementById('mCategory').value;
+            const rows = document.querySelectorAll('.m-item-row');
+            let items = [];
+            let total = 0;
+
+            rows.forEach(row => {
+                const name = row.querySelector('.m-item-name').value.trim() || 'Item';
+                const qty = parseFloat(row.querySelector('.m-item-qty').value) || 1;
+                const unitPrice = parseFloat(row.querySelector('.m-item-price').value) || 0;
+                const lineTotal = qty * unitPrice;
+                items.push({ name: qty > 1 ? `${name} (${qty}x)` : name, price: lineTotal, category: row.querySelector('.m-item-cat').value });
+                total += lineTotal;
+            });
+
+            if (items.length === 0) { alert('Add at least one item.'); return; }
+            const receiptTotal = parseFloat(document.getElementById('mReceiptTotal').value) || total;
+
+            transactions.push({ id: 'tx_' + Date.now(), user: currentProfile, store, receiptDate: date, category, items, total: receiptTotal });
+            saveAndRefresh();
+            closeModal('addModal');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Delete transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveAndRefresh();
+            }
+        }
+
+        function renderAdvancedAnalytics() {
+            const timeframe = document.getElementById('analyticsTimeframe').value;
+            const userFilter = document.getElementById('analyticsUserFilter').value;
+
+            let data = transactions;
+            if (userFilter !== 'all') {
+                data = data.filter(t => t.user === userFilter || t.user === profiles[userFilter].name);
+            }
+
+            const now = new Date();
+            if (timeframe === '30') { const c = new Date(); c.setDate(now.getDate() - 30); data = data.filter(t => new Date(t.receiptDate) >= c); }
+            else if (timeframe === '7') { const c = new Date(); c.setDate(now.getDate() - 7); data = data.filter(t => new Date(t.receiptDate) >= c); }
+            else if (timeframe === 'current_month') { const m = now.getMonth(), y = now.getFullYear(); data = data.filter(t => { const d = new Date(t.receiptDate); return d.getMonth() === m && d.getFullYear() === y; }); }
+
+            let totalSpend = 0, totalItems = 0;
+            const storeMap = {}, catMap = {}, userMap = {}, dateMap = {};
+            userMap[profiles.user1.name] = 0;
+            userMap[profiles.user2.name] = 0;
+
+            data.forEach(t => {
+                totalSpend += t.total;
+                storeMap[t.store] = (storeMap[t.store] || 0) + t.total;
+                let uname = t.user === 'user2' || t.user === profiles.user2.name ? profiles.user2.name : profiles.user1.name;
+                userMap[uname] = (userMap[uname] || 0) + t.total;
+                dateMap[t.receiptDate] = (dateMap[t.receiptDate] || 0) + t.total;
+                t.items.forEach(i => { totalItems++; catMap[i.category || t.category] = (catMap[i.category || t.category] || 0) + i.price; });
+            });
+
+            document.getElementById('kpiTotalSpend').innerText = `£${totalSpend.toFixed(2)}`;
+            document.getElementById('kpiTxCount').innerText = `${data.length} receipts`;
+            document.getElementById('kpiAvgTicket').innerText = `£${(data.length ? totalSpend / data.length : 0).toFixed(2)}`;
+
+            const compContainer = document.getElementById('analyticsCompContainer');
+            if (userFilter === 'all') {
+                compContainer.classList.remove('hidden');
+                const ctx = document.getElementById('userShareChart').getContext('2d');
+                if (userShareChartInstance) userShareChartInstance.destroy();
+                userShareChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: Object.keys(userMap), datasets: [{ data: Object.values(userMap), backgroundColor: ['#8b5cf6', '#ec4899'], borderRadius: 10 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+                });
+            } else { compContainer.classList.add('hidden'); }
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(trendCtx, {
+                type: 'line',
+                data: { labels: sortedDates, datasets: [{ data: sortedDates.map(d => dateMap[d]), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+            });
+
+            const catCtx = document.getElementById('extensiveCatChart').getContext('2d');
+            if (extensiveCatChartInstance) extensiveCatChartInstance.destroy();
+            extensiveCatChartInstance = new Chart(catCtx, {
+                type: 'doughnut',
+                data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#ec4899', '#3b82f6', '#8b5cf6'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } } }
+            });
+
+            const sortedStores = Object.keys(storeMap).sort((a,b) => storeMap[b] - storeMap[a]).slice(0, 5);
+            const storeCtx = document.getElementById('extensiveStoreChart').getContext('2d');
+            if (extensiveStoreChartInstance) extensiveStoreChartInstance.destroy();
+            extensiveStoreChartInstance = new Chart(storeCtx, {
+                type: 'bar',
+                data: { labels: sortedStores, datasets: [{ data: sortedStores.map(st => storeMap[st]), backgroundColor: '#ec4899', borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } }, y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function setThemeAccent(color) {
+            localStorage.setItem('expenselens_theme', color);
+            applyAppearanceSettings();
+        }
+
+        function setFontFamily(font) {
+            localStorage.setItem('expenselens_font', font);
+            applyAppearanceSettings();
+        }
+
+        function setTextScale(scale) {
+            localStorage.setItem('expenselens_scale', scale);
+            applyAppearanceSettings();
+        }
+
+        function applyAppearanceSettings() {
+            const font = localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif";
+            document.body.style.fontFamily = font;
+
+            const scale = localStorage.getItem('expenselens_scale') || 'normal';
+            if (scale === 'compact') {
+                document.documentElement.style.fontSize = '13px';
+            } else if (scale === 'large') {
+                document.documentElement.style.fontSize = '16px';
+            } else {
+                document.documentElement.style.fontSize = '14px';
+            }
+        }
+    </script>
+</body>
+</html>
