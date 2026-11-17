@@ -358,7 +358,7 @@
             <span class="text-[9px] font-medium mt-1">Settings</span>
         </button>
         <button onclick="openProfileSelector()" class="flex flex-col items-center text-slate-400 hover:text-white transition" title="Switch Profile">
-            <i class="fa-solid fa-user-switch text-base"></i>
+            <i class="fa-solid fa-user-gear text-base"></i>
             <span class="text-[9px] font-medium mt-1">Profile</span>
         </button>
     </nav>
@@ -1180,13 +1180,17 @@
             let data = transactions;
             if (currentProfile && currentProfile !== 'Master') {
                 const targetKey = currentProfile;
-                const targetName = profiles[currentProfile] ? profiles[profileKey].name : '';
+                const targetName = profiles[currentProfile] ? profiles[currentProfile].name : '';
                 data = data.filter(t => {
                     const u = t.user || 'user1';
                     return u === targetKey || u === targetName || (targetKey === 'user1' && (u === 'Sitosh' || u === 'user1')) || (targetKey === 'user2' && (u === 'Ashmita' || u === 'user2'));
                 });
-            } else if (userFilter !== 'all') {
-                data = data.filter(t => t.user === userFilter || t.user === profiles[userFilter].name);
+            } else if (userFilter && userFilter !== 'all') {
+                const targetName = profiles[userFilter] ? profiles[userFilter].name : '';
+                data = data.filter(t => {
+                    const u = t.user || 'user1';
+                    return u === userFilter || u === targetName || (userFilter === 'user1' && (u === 'Sitosh' || u === 'user1')) || (userFilter === 'user2' && (u === 'Ashmita' || u === 'user2'));
+                });
             }
 
             const now = new Date();
@@ -1326,6 +1330,27 @@
             </div>
         </div>
     </div>
+
+
+    <script>
+        let lastScrollTop = 0;
+        const navEl = document.querySelector('.floating-nav');
+        if (navEl) {
+            window.addEventListener('scroll', function() {
+                let st = window.pageYOffset || document.documentElement.scrollTop;
+                if (st > lastScrollTop && st > 50) {
+                    // Scrolling Down -> minimize slightly
+                    navEl.style.transform = 'translateY(15px) scale(0.96)';
+                    navEl.style.opacity = '0.9';
+                } else {
+                    // Scrolling Up -> expand / normal
+                    navEl.style.transform = 'translateY(0) scale(1)';
+                    navEl.style.opacity = '1';
+                }
+                lastScrollTop = st <= 0 ? 0 : st;
+            }, false);
+        }
+    </script>
 
 </body>
     
