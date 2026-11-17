@@ -12,8 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #090d16 100%); color: #f8fafc; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #090d16 100%); color: #f8fafc; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); transition: background 0.3s ease; }
         .glass-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6); }
         .glass-pill { background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); }
         .floating-nav { background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(35px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
@@ -39,7 +40,7 @@
                 <!-- User 1: Sitosh -->
                 <div class="flex flex-col items-center gap-3">
                     <div onclick="selectProfile('user1')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
-                        <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-purple-400 text-3xl group-hover:scale-105 transition">
+                        <div id="avatarDisplayUser1" class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-purple-400 text-3xl group-hover:scale-105 transition overflow-hidden">
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
                     </div>
@@ -54,7 +55,7 @@
                 <!-- User 2: Ashmita -->
                 <div class="flex flex-col items-center gap-3">
                     <div onclick="selectProfile('user2')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-pink-500 to-rose-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
-                        <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-rose-400 text-3xl group-hover:scale-105 transition">
+                        <div id="avatarDisplayUser2" class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-rose-400 text-3xl group-hover:scale-105 transition overflow-hidden">
                             <i class="fa-solid fa-user-nurse"></i>
                         </div>
                     </div>
@@ -89,7 +90,7 @@
     <header class="glass-panel border-b border-white/10 sticky top-0 z-40 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2.5">
             <button onclick="openProfileSelector()" class="glass-pill px-3 py-1.5 rounded-2xl text-xs flex items-center gap-2 text-white font-semibold hover:bg-white/15 transition">
-                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-slate-900 flex items-center justify-center text-emerald-400 text-xs">
+                <div id="headerAvatarContainer" class="w-6 h-6 rounded-full overflow-hidden border border-white/25 flex-shrink-0 bg-slate-900 flex items-center justify-center text-emerald-400 text-xs">
                     <i id="headerIcon" class="fa-solid fa-user"></i>
                 </div>
                 <span id="currentProfileBadge">Sitosh</span>
@@ -244,19 +245,55 @@
 
         <!-- ================= SETTINGS TAB ================= -->
         <div id="viewSettings" class="hidden space-y-4">
+            <!-- Appearance & Dual-Tone Theme Combos -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-palette text-emerald-400"></i> Appearance & Style</h3>
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-palette text-emerald-400"></i> Appearance & Dual-Tone Themes</h3>
+                
                 <div class="space-y-2">
-                    <label class="block text-slate-400 font-medium">Accent Theme Color</label>
-                    <div class="grid grid-cols-4 gap-2">
-                        <button onclick="setThemeAccent('emerald')" class="py-2.5 rounded-2xl font-semibold bg-emerald-500 text-slate-950 text-[11px] shadow">Emerald</button>
-                        <button onclick="setThemeAccent('indigo')" class="py-2.5 rounded-2xl font-semibold bg-indigo-600 text-white text-[11px] shadow">Indigo</button>
-                        <button onclick="setThemeAccent('rose')" class="py-2.5 rounded-2xl font-semibold bg-rose-600 text-white text-[11px] shadow">Rose</button>
-                        <button onclick="setThemeAccent('amber')" class="py-2.5 rounded-2xl font-semibold bg-amber-600 text-white text-[11px] shadow">Amber</button>
+                    <label class="block text-slate-400 font-medium">App Color Theme Combo</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setThemeCombo('emerald')" class="py-2.5 px-3 rounded-2xl font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-emerald-400 inline-block"></span> Emerald Glass
+                        </button>
+                        <button onclick="setThemeCombo('indigo')" class="py-2.5 px-3 rounded-2xl font-semibold bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-indigo-500 inline-block"></span> Indigo Nebula
+                        </button>
+                        <button onclick="setThemeCombo('rose')" class="py-2.5 px-3 rounded-2xl font-semibold bg-rose-500/20 border border-rose-500/40 text-rose-300 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-rose-500 inline-block"></span> Rose Crimson
+                        </button>
+                        <button onclick="setThemeCombo('amber')" class="py-2.5 px-3 rounded-2xl font-semibold bg-amber-500/20 border border-amber-500/40 text-amber-300 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-amber-500 inline-block"></span> Amber Sunset
+                        </button>
+                        <button onclick="setThemeCombo('cyberpunk')" class="py-2.5 px-3 rounded-2xl font-semibold bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-cyan-400 inline-block"></span> Cyberpunk Neon
+                        </button>
+                        <button onclick="setThemeCombo('midnight')" class="py-2.5 px-3 rounded-2xl font-semibold bg-slate-700/50 border border-slate-500 text-slate-200 text-left flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-slate-300 inline-block"></span> Midnight Slate
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <label class="block text-slate-400 font-medium">Typography Font Family</label>
+                    <select id="settingsFontSelect" onchange="setFontFamily(this.value)" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3 py-2.5 text-white text-xs">
+                        <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Modern)</option>
+                        <option value="'Inter', sans-serif">Inter (Clean)</option>
+                        <option value="'Roboto', sans-serif">Roboto (Standard)</option>
+                        <option value="'Poppins', sans-serif">Poppins (Rounded)</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <label class="block text-slate-400 font-medium">Interface Text Size Scale</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setTextScale('compact')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Compact</button>
+                        <button onclick="setTextScale('normal')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Normal</button>
+                        <button onclick="setTextScale('large')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Large</button>
                     </div>
                 </div>
             </div>
 
+            <!-- JSONBin Cloud Sync -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-cloud text-emerald-400"></i> JSONBin Cloud Sync</h3>
                 <div class="space-y-2.5">
@@ -272,6 +309,7 @@
                 </div>
             </div>
 
+            <!-- Data Safeguard -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400"></i> Data Safeguard</h3>
                 <div class="grid grid-cols-2 gap-2">
@@ -306,22 +344,31 @@
         </button>
     </nav>
 
-    <!-- ================= EDIT PROFILE MODAL ================= -->
+    <!-- ================= EDIT PROFILE MODAL (Name & Icon / Face Selector) ================= -->
     <div id="editProfileModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col border border-white/10">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950/80">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-user-pen text-emerald-400"></i> Edit Profile Name
+                    <i class="fa-solid fa-user-pen text-emerald-400"></i> Edit Profile & Face Icon
                 </h3>
                 <button onclick="closeModal('editProfileModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
             </div>
-            <div class="p-4 space-y-4 text-xs">
+            <div class="p-4 space-y-4 text-xs overflow-y-auto max-h-[75vh]">
                 <input type="hidden" id="editProfileKey" value="">
+                
                 <div class="space-y-1">
                     <label class="block text-slate-400 font-medium">Profile Name</label>
                     <input type="text" id="editProfileNameInput" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-bold" value="">
                 </div>
-                <button onclick="saveProfileEdit()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold py-3 rounded-2xl shadow-xl">Save Changes</button>
+
+                <div class="space-y-2">
+                    <label class="block text-slate-400 font-medium">Choose Vector Face / Icon</label>
+                    <div id="avatarPickerGrid" class="grid grid-cols-4 gap-3 p-2 bg-slate-950/80 rounded-2xl border border-white/10 text-xl">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <button onclick="saveProfileEdit()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold py-3.5 rounded-2xl shadow-xl">Save Changes</button>
             </div>
         </div>
     </div>
@@ -404,6 +451,11 @@
         let BAKED_SYNC_KEY = localStorage.getItem('expenselens_sync_key') || "$2a$10$ugHY0rLM63NIqnkawg9PZ.uRh3Q2fYRt9r.l.ykLZivrOTEfZdiD6";
         let BAKED_BIN_ID = localStorage.getItem('expenselens_bin_id') || "6afbefb3ffd5d16053c79172";
 
+        const FACE_ICONS = [
+            "fa-user-tie", "fa-user-nurse", "fa-user-graduate", "fa-user-astronaut",
+            "fa-user-ninja", "fa-user-secret", "fa-user-shield", "fa-user-doctor"
+        ];
+
         let transactions = JSON.parse(localStorage.getItem('expenselens_multi_txs') || '[]');
         let currentProfile = null;
         
@@ -416,6 +468,7 @@
         let searchScope = 'store';
         let datePreset = 'all';
         let expandedStores = {};
+        let selectedIconChoice = '';
         
         let trendChartInstance = null;
         let userShareChartInstance = null;
@@ -428,7 +481,10 @@
             if (!profiles.Master) profiles.Master = { name: "Master View", icon: "fa-users-gear" };
 
             document.getElementById('nameUser1').innerText = profiles.user1.name || "Sitosh";
+            document.getElementById('avatarDisplayUser1').innerHTML = `<i class="fa-solid ${profiles.user1.icon || 'fa-user-tie'}"></i>`;
+
             document.getElementById('nameUser2').innerText = profiles.user2.name || "Ashmita";
+            document.getElementById('avatarDisplayUser2').innerHTML = `<i class="fa-solid ${profiles.user2.icon || 'fa-user-nurse'}"></i>`;
 
             document.getElementById('optUser1').innerText = (profiles.user1.name || "Sitosh") + " Only";
             document.getElementById('optUser2').innerText = (profiles.user2.name || "Ashmita") + " Only";
@@ -438,16 +494,37 @@
         function openEditProfile(userKey) {
             document.getElementById('editProfileKey').value = userKey;
             document.getElementById('editProfileNameInput').value = profiles[userKey].name || '';
+            selectedIconChoice = profiles[userKey].icon || FACE_ICONS[0];
+
+            renderAvatarPickerGrid();
             openModal('editProfileModal');
+        }
+
+        function renderAvatarPickerGrid() {
+            const grid = document.getElementById('avatarPickerGrid');
+            grid.innerHTML = FACE_ICONS.map(icon => {
+                const isSelected = selectedIconChoice === icon;
+                const borderClass = isSelected ? 'border-emerald-400 bg-emerald-500/20 text-emerald-400 scale-105 shadow-lg' : 'border-white/10 text-slate-300 hover:border-white/40';
+                return `
+                    <div onclick="selectIconChoice('${icon}')" class="h-14 rounded-2xl border-2 ${borderClass} transition cursor-pointer flex items-center justify-center bg-slate-900">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectIconChoice(icon) {
+            selectedIconChoice = icon;
+            renderAvatarPickerGrid();
         }
 
         function saveProfileEdit() {
             const userKey = document.getElementById('editProfileKey').value;
             const newName = document.getElementById('editProfileNameInput').value.trim();
             if (userKey && profiles[userKey]) {
-                if (newName) {
-                    profiles[userKey].name = newName;
-                }
+                if (newName) profiles[userKey].name = newName;
+                if (selectedIconChoice) profiles[userKey].icon = selectedIconChoice;
+                
                 localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                 updateProfileUI();
                 
@@ -470,10 +547,8 @@
             const headerIcon = document.getElementById('headerIcon');
             if (profileKey === 'Master') {
                 headerIcon.className = "fa-solid fa-users-gear";
-            } else if (profileKey === 'user1') {
-                headerIcon.className = "fa-solid fa-user-tie";
             } else {
-                headerIcon.className = "fa-solid fa-user-nurse";
+                headerIcon.className = `fa-solid ${profiles[profileKey].icon || 'fa-user'}`;
             }
 
             const masterBanner = document.getElementById('masterBanner');
@@ -498,6 +573,7 @@
             updateProfileUI();
             if (document.getElementById('settingsSyncKey')) document.getElementById('settingsSyncKey').value = BAKED_SYNC_KEY;
             if (document.getElementById('settingsBinId')) document.getElementById('settingsBinId').value = BAKED_BIN_ID;
+            applyAppearanceSettings();
             if (BAKED_SYNC_KEY && BAKED_BIN_ID && !BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) {
                 triggerCloudSync(true);
             }
@@ -959,8 +1035,43 @@
             });
         }
 
-        function setThemeAccent(color) {
-            localStorage.setItem('expenselens_theme', color);
+        function setThemeCombo(combo) {
+            localStorage.setItem('expenselens_theme_combo', combo);
+            applyAppearanceSettings();
+        }
+
+        function setFontFamily(font) {
+            localStorage.setItem('expenselens_font', font);
+            applyAppearanceSettings();
+        }
+
+        function setTextScale(scale) {
+            localStorage.setItem('expenselens_scale', scale);
+            applyAppearanceSettings();
+        }
+
+        function applyAppearanceSettings() {
+            const font = localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif";
+            document.body.style.fontFamily = font;
+
+            const scale = localStorage.getItem('expenselens_scale') || 'normal';
+            if (scale === 'compact') {
+                document.documentElement.style.fontSize = '13px';
+            } else if (scale === 'large') {
+                document.documentElement.style.fontSize = '16px';
+            } else {
+                document.documentElement.style.fontSize = '14px';
+            }
+
+            const combo = localStorage.getItem('expenselens_theme_combo') || 'emerald';
+            let bgGradient = 'radial-gradient(circle at top, #1e293b 0%, #090d16 100%)';
+            if (combo === 'indigo') bgGradient = 'radial-gradient(circle at top, #312e81 0%, #090d16 100%)';
+            else if (combo === 'rose') bgGradient = 'radial-gradient(circle at top, #881337 0%, #090d16 100%)';
+            else if (combo === 'amber') bgGradient = 'radial-gradient(circle at top, #78350f 0%, #090d16 100%)';
+            else if (combo === 'cyberpunk') bgGradient = 'radial-gradient(circle at top, #164e63 0%, #020617 100%)';
+            else if (combo === 'midnight') bgGradient = 'radial-gradient(circle at top, #0f172a 0%, #000000 100%)';
+            
+            document.body.style.background = bgGradient;
         }
     </script>
 </body>
