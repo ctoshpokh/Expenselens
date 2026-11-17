@@ -673,7 +673,6 @@
             const scanStatus = document.getElementById('scanStatus');
             scanStatus.classList.remove('hidden');
             
-            // Read actual image file and extract real receipt data or use correct sum
             const reader = new FileReader();
             reader.onload = function(e) {
                 setTimeout(() => {
@@ -681,27 +680,19 @@
                     document.getElementById('mStore').value = "ALDI Stores (Uxbridge)";
                     document.getElementById('mCategory').value = "Groceries";
                     
-                    const spatialItems = [
-                        { name: "Everyday Tissues", qty: 2, unitPrice: 0.79, category: "Household & Toiletries" },
-                        { name: "Chicken Thighs 1Kg", qty: 2, unitPrice: 2.95, category: "Groceries" },
-                        { name: "Oat Barista 1L", qty: 3, unitPrice: 0.69, category: "Groceries" },
-                        { name: "Juice Lemon", qty: 1, unitPrice: 1.18, category: "Groceries" },
-                        { name: "Avocado Organic", qty: 2, unitPrice: 1.49, category: "Groceries" },
-                        { name: "Greek Yogurt 500g", qty: 2, unitPrice: 1.75, category: "Groceries" }
-                    ];
-                    
+                    // Clear existing items and leave one clean empty row for user input, or let user add manually
                     const list = document.getElementById('mItemsList');
                     list.innerHTML = '';
-                    spatialItems.forEach(item => addModalItemRow(item.name, item.qty, item.unitPrice, item.category));
                     
-                    // Automatically calculate exact sum so grand total matches perfectly!
-                    let exactSum = spatialItems.reduce((acc, item) => acc + (item.qty * item.unitPrice), 0);
-                    document.getElementById('mReceiptTotal').value = exactSum.toFixed(2);
+                    // Add one blank item row so the user can enter their actual receipt items
+                    addModalItemRow('', 1, '', 'Groceries');
                     
+                    document.getElementById('mReceiptTotal').value = '';
                     validateReceiptTotal();
+                    
                     scanStatus.className = "text-[10px] text-emerald-400 font-medium pt-1";
-                    scanStatus.innerText = "✨ Spatial scan complete & verified!";
-                }, 600);
+                    scanStatus.innerText = "✨ Photo uploaded! Enter or add your receipt items below:";
+                }, 500);
             };
             reader.readAsDataURL(file);
         }
