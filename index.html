@@ -481,31 +481,34 @@
         let selectedAvatarChoice = '';
 
         
+        
+        let selectedAvatarChoice = '';
+
         function openEditProfile(userKey) {
             document.getElementById('editProfileKey').value = userKey;
             document.getElementById('editProfileNameInput').value = profiles[userKey].name || '';
             selectedAvatarChoice = profiles[userKey].avatar || PRESET_AVATARS[0];
 
-            const grid = document.getElementById('avatarPickerGrid');
-            grid.innerHTML = PRESET_AVATARS.map((url, idx) => `
-                <button type="button" data-avatar-url="${url}" onclick="selectAvatarOption(this, '${url}')" class="w-14 h-14 rounded-full overflow-hidden border-2 ${selectedAvatarChoice === url ? 'border-emerald-400 scale-105 shadow-lg' : 'border-white/10 hover:border-white/40'} transition flex items-center justify-center bg-slate-900">
-                    <img src="${url}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'" class="w-full h-full object-cover pointer-events-none" alt="avatar ${idx}">
-                </button>
-            `).join('');
-
+            renderAvatarPickerGrid();
             openModal('editProfileModal');
         }
 
-        function selectAvatarOption(btnElement, url) {
+        function renderAvatarPickerGrid() {
+            const grid = document.getElementById('avatarPickerGrid');
+            grid.innerHTML = PRESET_AVATARS.map((url, idx) => {
+                const isSelected = selectedAvatarChoice === url;
+                const borderClass = isSelected ? 'border-emerald-400 scale-105 shadow-lg ring-2 ring-emerald-400/50' : 'border-white/10 hover:border-white/40';
+                return `
+                    <div onclick="selectAvatarChoiceUrl('${url}')" class="w-14 h-14 rounded-full overflow-hidden border-2 ${borderClass} transition cursor-pointer flex items-center justify-center bg-slate-900">
+                        <img src="${url}" class="w-full h-full object-cover" alt="avatar ${idx}">
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectAvatarChoiceUrl(url) {
             selectedAvatarChoice = url;
-            const buttons = document.querySelectorAll('#avatarPickerGrid button');
-            buttons.forEach(btn => {
-                if (btn === btnElement) {
-                    btn.className = "w-14 h-14 rounded-full overflow-hidden border-2 border-emerald-400 scale-105 shadow-lg transition flex items-center justify-center bg-slate-900";
-                } else {
-                    btn.className = "w-14 h-14 rounded-full overflow-hidden border-2 border-white/10 hover:border-white/40 transition flex items-center justify-center bg-slate-900";
-                }
-            });
+            renderAvatarPickerGrid();
         }
 
         function saveProfileEdit() {
