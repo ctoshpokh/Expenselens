@@ -585,6 +585,26 @@
                 masterBanner.classList.add('hidden');
                 addBtn.style.display = 'flex';
             }
+            
+            // Update Analytics User Filter dropdown based on profile
+            const analyticsUserSelect = document.getElementById('analyticsUserFilter');
+            if (analyticsUserSelect) {
+                if (profileKey === 'Master') {
+                    analyticsUserSelect.innerHTML = `
+                        <option value="all">Household Combined</option>
+                        <option value="user1" id="optUser1">${profiles.user1.name || 'Sitosh'} Only</option>
+                        <option value="user2" id="optUser2">${profiles.user2.name || 'Ashmita'} Only</option>
+                    `;
+                    analyticsUserSelect.value = 'all';
+                } else {
+                    const userName = profiles[profileKey].name || (profileKey === 'user1' ? 'Sitosh' : 'Ashmita');
+                    analyticsUserSelect.innerHTML = `
+                        <option value="${profileKey}">${userName} Only</option>
+                    `;
+                    analyticsUserSelect.value = profileKey;
+                }
+            }
+            
             switchNavTab('ledger');
         }
 
@@ -1154,7 +1174,14 @@
             const userFilter = document.getElementById('analyticsUserFilter').value;
 
             let data = transactions;
-            if (userFilter !== 'all') {
+            if (currentProfile && currentProfile !== 'Master') {
+                const targetKey = currentProfile;
+                const targetName = profiles[currentProfile] ? profiles[profileKey].name : '';
+                data = data.filter(t => {
+                    const u = t.user || 'user1';
+                    return u === targetKey || u === targetName || (targetKey === 'user1' && (u === 'Sitosh' || u === 'user1')) || (targetKey === 'user2' && (u === 'Ashmita' || u === 'user2'));
+                });
+            } else if (userFilter !== 'all') {
                 data = data.filter(t => t.user === userFilter || t.user === profiles[userFilter].name);
             }
 
