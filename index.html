@@ -36,10 +36,12 @@
 
             <!-- Profile Cards Grid -->
             <div class="flex justify-center gap-8 pt-2">
-                <!-- User 1: Sitosh (Male) -->
+                <!-- User 1: Sitosh -->
                 <div class="flex flex-col items-center gap-3">
                     <div onclick="selectProfile('user1')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
-                        <img id="avatarImgUser1" src="" class="w-full h-full object-cover rounded-full group-hover:scale-105 transition" alt="Sitosh">
+                        <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-purple-400 text-3xl group-hover:scale-105 transition">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span id="nameUser1" class="text-sm font-bold text-slate-200 tracking-wide">Sitosh</span>
@@ -49,10 +51,12 @@
                     </div>
                 </div>
 
-                <!-- User 2: Ashmita (Female) -->
+                <!-- User 2: Ashmita -->
                 <div class="flex flex-col items-center gap-3">
                     <div onclick="selectProfile('user2')" class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-pink-500 to-rose-500 shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white/20 hover:border-emerald-400 transition cursor-pointer bg-slate-900 group">
-                        <img id="avatarImgUser2" src="" class="w-full h-full object-cover rounded-full group-hover:scale-105 transition" alt="Ashmita">
+                        <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-rose-400 text-3xl group-hover:scale-105 transition">
+                            <i class="fa-solid fa-user-nurse"></i>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span id="nameUser2" class="text-sm font-bold text-slate-200 tracking-wide">Ashmita</span>
@@ -85,8 +89,8 @@
     <header class="glass-panel border-b border-white/10 sticky top-0 z-40 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2.5">
             <button onclick="openProfileSelector()" class="glass-pill px-3 py-1.5 rounded-2xl text-xs flex items-center gap-2 text-white font-semibold hover:bg-white/15 transition">
-                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-slate-900 flex items-center justify-center">
-                    <img id="headerAvatarImg" src="" class="w-full h-full object-cover" alt="">
+                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-slate-900 flex items-center justify-center text-emerald-400 text-xs">
+                    <i id="headerIcon" class="fa-solid fa-user"></i>
                 </div>
                 <span id="currentProfileBadge">Sitosh</span>
             </button>
@@ -238,11 +242,10 @@
             </div>
         </div>
 
-        <!-- ================= SETTINGS TAB (Menu Item) ================= -->
+        <!-- ================= SETTINGS TAB ================= -->
         <div id="viewSettings" class="hidden space-y-4">
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-palette text-emerald-400"></i> Appearance & Style</h3>
-                
                 <div class="space-y-2">
                     <label class="block text-slate-400 font-medium">Accent Theme Color</label>
                     <div class="grid grid-cols-4 gap-2">
@@ -250,25 +253,6 @@
                         <button onclick="setThemeAccent('indigo')" class="py-2.5 rounded-2xl font-semibold bg-indigo-600 text-white text-[11px] shadow">Indigo</button>
                         <button onclick="setThemeAccent('rose')" class="py-2.5 rounded-2xl font-semibold bg-rose-600 text-white text-[11px] shadow">Rose</button>
                         <button onclick="setThemeAccent('amber')" class="py-2.5 rounded-2xl font-semibold bg-amber-600 text-white text-[11px] shadow">Amber</button>
-                    </div>
-                </div>
-
-                <div class="space-y-2 pt-1">
-                    <label class="block text-slate-400 font-medium">Typography Font Family</label>
-                    <select id="settingsFontSelect" onchange="setFontFamily(this.value)" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3 py-2.5 text-white text-xs">
-                        <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Modern)</option>
-                        <option value="'Inter', sans-serif">Inter (Clean)</option>
-                        <option value="'Roboto', sans-serif">Roboto (Standard)</option>
-                        <option value="'Poppins', sans-serif">Poppins (Rounded)</option>
-                    </select>
-                </div>
-
-                <div class="space-y-2 pt-1">
-                    <label class="block text-slate-400 font-medium">Interface Text Size</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="setTextScale('compact')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Compact</button>
-                        <button onclick="setTextScale('normal')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Normal</button>
-                        <button onclick="setTextScale('large')" class="py-2.5 rounded-2xl font-semibold glass-pill text-slate-300 text-[11px]">Large</button>
                     </div>
                 </div>
             </div>
@@ -324,29 +308,20 @@
 
     <!-- ================= EDIT PROFILE MODAL ================= -->
     <div id="editProfileModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel rounded-3xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10">
+        <div class="glass-panel rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col border border-white/10">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950/80">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-user-pen text-emerald-400"></i> Edit Household Profile
+                    <i class="fa-solid fa-user-pen text-emerald-400"></i> Edit Profile Name
                 </h3>
                 <button onclick="closeModal('editProfileModal')" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-base"></i></button>
             </div>
-            <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+            <div class="p-4 space-y-4 text-xs">
                 <input type="hidden" id="editProfileKey" value="">
-                
                 <div class="space-y-1">
                     <label class="block text-slate-400 font-medium">Profile Name</label>
                     <input type="text" id="editProfileNameInput" class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-bold" value="">
                 </div>
-
-                <div class="space-y-2">
-                    <label class="block text-slate-400 font-medium">Choose an Avatar (Tap to select)</label>
-                    <div id="avatarPickerGrid" class="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto p-2 bg-slate-950/80 rounded-2xl border border-white/10">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
-                <button onclick="saveProfileEdit()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold py-3.5 rounded-2xl shadow-xl">Save Changes</button>
+                <button onclick="saveProfileEdit()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold py-3 rounded-2xl shadow-xl">Save Changes</button>
             </div>
         </div>
     </div>
@@ -429,29 +404,13 @@
         let BAKED_SYNC_KEY = localStorage.getItem('expenselens_sync_key') || "$2a$10$ugHY0rLM63NIqnkawg9PZ.uRh3Q2fYRt9r.l.ykLZivrOTEfZdiD6";
         let BAKED_BIN_ID = localStorage.getItem('expenselens_bin_id') || "6afbefb3ffd5d16053c79172";
 
-        const MALE_AVATARS = [
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80"
-        ];
-
-        const FEMALE_AVATARS = [
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80"
-        ];
-
-        const PRESET_AVATARS = [...MALE_AVATARS, ...FEMALE_AVATARS];
-
         let transactions = JSON.parse(localStorage.getItem('expenselens_multi_txs') || '[]');
-        let currentProfile = null; // Forces profile selection on startup
+        let currentProfile = null;
         
         let profiles = JSON.parse(localStorage.getItem('expenselens_profiles_cfg') || JSON.stringify({
-            user1: { name: "Sitosh", avatar: MALE_AVATARS[0] },
-            user2: { name: "Ashmita", avatar: FEMALE_AVATARS[0] },
-            Master: { name: "Master View", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" }
+            user1: { name: "Sitosh", icon: "fa-user-tie" },
+            user2: { name: "Ashmita", icon: "fa-user-nurse" },
+            Master: { name: "Master View", icon: "fa-users-gear" }
         }));
 
         let searchScope = 'store';
@@ -464,51 +423,22 @@
         let extensiveStoreChartInstance = null;
 
         function updateProfileUI() {
-            if (!profiles.user1) profiles.user1 = { name: "Sitosh", avatar: MALE_AVATARS[0] };
-            if (!profiles.user2) profiles.user2 = { name: "Ashmita", avatar: FEMALE_AVATARS[0] };
-            if (!profiles.Master) profiles.Master = { name: "Master View", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" };
+            if (!profiles.user1) profiles.user1 = { name: "Sitosh", icon: "fa-user-tie" };
+            if (!profiles.user2) profiles.user2 = { name: "Ashmita", icon: "fa-user-nurse" };
+            if (!profiles.Master) profiles.Master = { name: "Master View", icon: "fa-users-gear" };
 
             document.getElementById('nameUser1').innerText = profiles.user1.name || "Sitosh";
-            document.getElementById('avatarImgUser1').src = profiles.user1.avatar || MALE_AVATARS[0];
             document.getElementById('nameUser2').innerText = profiles.user2.name || "Ashmita";
-            document.getElementById('avatarImgUser2').src = profiles.user2.avatar || FEMALE_AVATARS[0];
 
             document.getElementById('optUser1').innerText = (profiles.user1.name || "Sitosh") + " Only";
             document.getElementById('optUser2').innerText = (profiles.user2.name || "Ashmita") + " Only";
             document.getElementById('masterBannerSub').innerText = `Comparing ${profiles.user1.name || "Sitosh"} & ${profiles.user2.name || "Ashmita"}`;
         }
 
-        let selectedAvatarChoice = '';
-
-        
-        
-        let selectedAvatarChoice = '';
-
         function openEditProfile(userKey) {
             document.getElementById('editProfileKey').value = userKey;
             document.getElementById('editProfileNameInput').value = profiles[userKey].name || '';
-            selectedAvatarChoice = profiles[userKey].avatar || PRESET_AVATARS[0];
-
-            renderAvatarPickerGrid();
             openModal('editProfileModal');
-        }
-
-        function renderAvatarPickerGrid() {
-            const grid = document.getElementById('avatarPickerGrid');
-            grid.innerHTML = PRESET_AVATARS.map((url, idx) => {
-                const isSelected = selectedAvatarChoice === url;
-                const borderClass = isSelected ? 'border-emerald-400 scale-105 shadow-lg ring-2 ring-emerald-400/50' : 'border-white/10 hover:border-white/40';
-                return `
-                    <div onclick="selectAvatarChoiceUrl('${url}')" class="w-14 h-14 rounded-full overflow-hidden border-2 ${borderClass} transition cursor-pointer flex items-center justify-center bg-slate-900">
-                        <img src="${url}" class="w-full h-full object-cover" alt="avatar ${idx}">
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function selectAvatarChoiceUrl(url) {
-            selectedAvatarChoice = url;
-            renderAvatarPickerGrid();
         }
 
         function saveProfileEdit() {
@@ -518,22 +448,17 @@
                 if (newName) {
                     profiles[userKey].name = newName;
                 }
-                if (selectedAvatarChoice) {
-                    profiles[userKey].avatar = selectedAvatarChoice;
-                }
                 localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                 updateProfileUI();
                 
                 if (currentProfile === userKey) {
                     document.getElementById('currentProfileBadge').innerText = profiles[userKey].name;
-                    document.getElementById('headerAvatarImg').src = profiles[userKey].avatar;
                 }
                 
                 closeModal('editProfileModal');
                 triggerCloudSync(true);
             }
         }
-
 
         function selectProfile(profileKey) {
             currentProfile = profileKey;
@@ -542,11 +467,13 @@
             const badgeText = profileKey === 'Master' ? 'Master View' : profiles[profileKey].name;
             document.getElementById('currentProfileBadge').innerText = badgeText;
             
-            const headerAvatar = document.getElementById('headerAvatarImg');
+            const headerIcon = document.getElementById('headerIcon');
             if (profileKey === 'Master') {
-                headerAvatar.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80";
+                headerIcon.className = "fa-solid fa-users-gear";
+            } else if (profileKey === 'user1') {
+                headerIcon.className = "fa-solid fa-user-tie";
             } else {
-                headerAvatar.src = profiles[profileKey].avatar || PRESET_AVATARS[0];
+                headerIcon.className = "fa-solid fa-user-nurse";
             }
 
             const masterBanner = document.getElementById('masterBanner');
@@ -571,7 +498,6 @@
             updateProfileUI();
             if (document.getElementById('settingsSyncKey')) document.getElementById('settingsSyncKey').value = BAKED_SYNC_KEY;
             if (document.getElementById('settingsBinId')) document.getElementById('settingsBinId').value = BAKED_BIN_ID;
-            applyAppearanceSettings();
             if (BAKED_SYNC_KEY && BAKED_BIN_ID && !BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) {
                 triggerCloudSync(true);
             }
@@ -1035,31 +961,6 @@
 
         function setThemeAccent(color) {
             localStorage.setItem('expenselens_theme', color);
-            applyAppearanceSettings();
-        }
-
-        function setFontFamily(font) {
-            localStorage.setItem('expenselens_font', font);
-            applyAppearanceSettings();
-        }
-
-        function setTextScale(scale) {
-            localStorage.setItem('expenselens_scale', scale);
-            applyAppearanceSettings();
-        }
-
-        function applyAppearanceSettings() {
-            const font = localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif";
-            document.body.style.fontFamily = font;
-
-            const scale = localStorage.getItem('expenselens_scale') || 'normal';
-            if (scale === 'compact') {
-                document.documentElement.style.fontSize = '13px';
-            } else if (scale === 'large') {
-                document.documentElement.style.fontSize = '16px';
-            } else {
-                document.documentElement.style.fontSize = '14px';
-            }
         }
     </script>
 </body>
