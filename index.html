@@ -309,6 +309,14 @@
                 </div>
             </div>
 
+            <!-- Account & Profile Session -->
+            <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-user-gear text-emerald-400"></i> Profile Session</h3>
+                <button onclick="localStorage.removeItem('expenselens_active_session'); openProfileSelector();" class="w-full glass-pill text-amber-400 hover:bg-white/10 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> Switch Profile / Lock Session
+                </button>
+            </div>
+
             <!-- Data Safeguard -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400"></i> Data Safeguard</h3>
@@ -539,6 +547,14 @@
 
         function selectProfile(profileKey) {
             currentProfile = profileKey;
+            
+            // Save session with 1 month expiry (30 days)
+            const sessionData = {
+                profileKey: profileKey,
+                expiresAt: new Date().getTime() + (30 * 24 * 60 * 60 * 1000)
+            };
+            localStorage.setItem('expenselens_active_session', JSON.stringify(sessionData));
+
             document.getElementById('profileScreen').classList.add('hidden');
             
             const badgeText = profileKey === 'Master' ? 'Master View' : profiles[profileKey].name;
@@ -577,7 +593,25 @@
             if (BAKED_SYNC_KEY && BAKED_BIN_ID && !BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) {
                 triggerCloudSync(true);
             }
-            openProfileSelector();
+
+            // Check 30-day persistent session
+            const savedSessionStr = localStorage.getItem('expenselens_active_session');
+            let sessionValid = false;
+            if (savedSessionStr) {
+                try {
+                    const session = JSON.parse(savedSessionStr);
+                    if (session && session.expiresAt && new Date().getTime() < session.expiresAt) {
+                        if (profiles[session.profileKey] || session.profileKey === 'Master') {
+                            selectProfile(session.profileKey);
+                            sessionValid = true;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            if (!sessionValid) {
+                openProfileSelector();
+            }
         });
 
         function saveCloudSettings() {
