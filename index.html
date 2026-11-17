@@ -338,24 +338,28 @@
     </main>
 
     <!-- ================= FLOATING NAVIGATION BAR ================= -->
-    <nav class="fixed bottom-6 left-4 right-4 floating-nav rounded-3xl py-2 px-6 z-40 flex justify-around items-center max-w-sm mx-auto">
+    <nav class="fixed bottom-6 left-4 right-4 floating-nav rounded-3xl py-2 px-5 z-40 flex justify-between items-center max-w-sm mx-auto">
         <button onclick="switchNavTab('ledger')" id="navLedger" class="flex flex-col items-center text-emerald-400 transition">
             <i class="fa-solid fa-wallet text-base"></i>
-            <span class="text-[10px] font-semibold mt-1">Ledger</span>
-        </button>
-        <button onclick="openAddModal()" class="flex flex-col items-center text-slate-400 hover:text-white transition">
-            <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl -mt-6 border-4 border-slate-950 font-bold">
-                <i class="fa-solid fa-plus text-sm"></i>
-            </div>
-            <span class="text-[10px] font-medium mt-0.5">Add</span>
+            <span class="text-[9px] font-semibold mt-1">Ledger</span>
         </button>
         <button onclick="switchNavTab('analytics')" id="navAnalytics" class="flex flex-col items-center text-slate-400 hover:text-white transition">
             <i class="fa-solid fa-chart-column text-base"></i>
-            <span class="text-[10px] font-medium mt-1">Analytics</span>
+            <span class="text-[9px] font-medium mt-1">Analytics</span>
+        </button>
+        <button onclick="openAddModal()" class="flex flex-col items-center text-slate-400 hover:text-white transition">
+            <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 w-11 h-11 rounded-full flex items-center justify-center shadow-2xl -mt-5 border-4 border-slate-950 font-bold">
+                <i class="fa-solid fa-plus text-sm"></i>
+            </div>
+            <span class="text-[9px] font-medium mt-0.5">Add</span>
         </button>
         <button onclick="switchNavTab('settings')" id="navSettings" class="flex flex-col items-center text-slate-400 hover:text-white transition">
             <i class="fa-solid fa-gear text-base"></i>
-            <span class="text-[10px] font-medium mt-1">Settings</span>
+            <span class="text-[9px] font-medium mt-1">Settings</span>
+        </button>
+        <button onclick="openProfileSelector()" class="flex flex-col items-center text-slate-400 hover:text-white transition" title="Switch Profile">
+            <i class="fa-solid fa-user-switch text-base"></i>
+            <span class="text-[9px] font-medium mt-1">Profile</span>
         </button>
     </nav>
 
@@ -873,21 +877,21 @@
             vAnalytics.classList.add('hidden');
             vSettings.classList.add('hidden');
 
-            bLedger.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
-            bAnalytics.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
-            bSettings.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+            if (bLedger) bLedger.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+            if (bAnalytics) bAnalytics.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
+            if (bSettings) bSettings.className = 'flex flex-col items-center text-slate-400 hover:text-white transition';
 
             if (tab === 'ledger') {
                 vLedger.classList.remove('hidden');
-                bLedger.className = 'flex flex-col items-center text-emerald-400 transition';
+                if (bLedger) bLedger.className = 'flex flex-col items-center text-emerald-400 transition';
                 renderApp();
             } else if (tab === 'analytics') {
                 vAnalytics.classList.remove('hidden');
-                bAnalytics.className = 'flex flex-col items-center text-emerald-400 transition';
+                if (bAnalytics) bAnalytics.className = 'flex flex-col items-center text-emerald-400 transition';
                 renderAdvancedAnalytics();
             } else if (tab === 'settings') {
                 vSettings.classList.remove('hidden');
-                bSettings.className = 'flex flex-col items-center text-emerald-400 transition';
+                if (bSettings) bSettings.className = 'flex flex-col items-center text-emerald-400 transition';
             }
         }
 
