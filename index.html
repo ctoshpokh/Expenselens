@@ -669,17 +669,24 @@
             const icon = document.getElementById('syncCloudIcon');
             if (icon) icon.className = "fa-solid fa-spinner fa-spin";
             try {
+                let deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
+                // Filter out any locally deleted transactions
+                transactions = transactions.filter(t => !deletedIds.includes(t.id));
+
                 const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}/latest`, {
                     headers: { 'X-Master-Key': BAKED_SYNC_KEY }
                 });
                 if (getRes.ok) {
                     const cloudData = await getRes.json();
                     if (cloudData && cloudData.record) {
-                        const cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
+                        let cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
+                        // Filter out deleted IDs from cloud as well
+                        cloudTxs = cloudTxs.filter(t => !deletedIds.includes(t.id));
+                        
                         const txMap = {};
                         transactions.forEach(t => txMap[t.id] = t);
                         cloudTxs.forEach(t => { if (!txMap[t.id]) txMap[t.id] = t; });
-                        transactions = Object.values(txMap);
+                        transactions = Object.values(txMap).filter(t => !deletedIds.includes(t.id));
                         localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
                         if (cloudData.record.profiles) {
                             profiles = cloudData.record.profiles;
@@ -692,7 +699,7 @@
                 await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': BAKED_SYNC_KEY },
-                    body: JSON.stringify({ transactions, profiles })
+                    body: JSON.stringify({ transactions: transactions.filter(t => !deletedIds.includes(t.id)), profiles })
                 });
             } catch (err) { console.log(err); }
             finally { if (icon) icon.className = "fa-solid fa-cloud"; }
@@ -1121,6 +1128,9 @@
             const id = document.getElementById('activeReceiptActionId').value;
             closeModal('receiptActionModal');
             if (confirm('Are you sure you want to delete this entire store receipt?')) {
+                let deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
+                deletedIds.push(id);
+                localStorage.setItem('expenselens_deleted_ids', JSON.stringify(deletedIds));
                 transactions = transactions.filter(t => t.id !== id);
                 saveAndRefresh();
             }
@@ -1168,6 +1178,9 @@
 
         function deleteTransaction(id) {
             if (confirm('Delete transaction?')) {
+                let deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
+                deletedIds.push(id);
+                localStorage.setItem('expenselens_deleted_ids', JSON.stringify(deletedIds));
                 transactions = transactions.filter(t => t.id !== id);
                 saveAndRefresh();
             }
