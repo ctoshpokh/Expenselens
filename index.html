@@ -316,6 +316,19 @@
                 </div>
             </div>
 
+            <!-- Receipt Reading (Vision) -->
+            <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-camera text-emerald-400"></i> Receipt Reading</h3>
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Anthropic API Key</label>
+                        <input type="password" id="settingsVisionKey" placeholder="sk-ant-..." class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-mono text-[11px]">
+                    </div>
+                    <button onclick="saveVisionKey()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-2xl shadow-lg">Save Key</button>
+                    <p id="visionKeyStatus" class="text-[10px] text-slate-400">Stored only on this device. Used to read receipt photos automatically.</p>
+                </div>
+            </div>
+
             <!-- Account & Profile Session -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
                 <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-user-gear text-emerald-400"></i> Profile Session</h3>
@@ -419,6 +432,7 @@
                         </label>
                     </div>
                     <div id="scanStatus" class="text-[10px] text-amber-400 hidden font-medium pt-1">Scanning receipt items...</div>
+                    <img id="receiptPreview" alt="Receipt preview" class="hidden w-full max-h-64 object-contain rounded-2xl border border-white/10 bg-slate-900">
                 </div>
 
                 <div class="bg-slate-950/80 border border-white/10 rounded-3xl p-3.5 space-y-2">
@@ -544,6 +558,7 @@
             if (userKey && profiles[userKey]) {
                 if (newName) profiles[userKey].name = newName;
                 if (selectedIconChoice) profiles[userKey].icon = selectedIconChoice;
+                localStorage.setItem('expenselens_profiles_updated', new Date().toISOString());
                 
                 localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                 updateProfileUI();
@@ -623,6 +638,7 @@
             if (document.getElementById('settingsSyncKey')) document.getElementById('settingsSyncKey').value = BAKED_SYNC_KEY;
             if (document.getElementById('settingsBinId')) document.getElementById('settingsBinId').value = BAKED_BIN_ID;
             applyAppearanceSettings();
+            if (document.getElementById('settingsVisionKey')) document.getElementById('settingsVisionKey').value = localStorage.getItem('expenselens_vision_key') || '';
             if (BAKED_SYNC_KEY && BAKED_BIN_ID && !BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) {
                 triggerCloudSync(true);
             }
@@ -661,6 +677,18 @@
             }
         });
 
+        function saveVisionKey() {
+            const k = document.getElementById('settingsVisionKey').value.trim();
+            const status = document.getElementById('visionKeyStatus');
+            if (k) {
+                localStorage.setItem('expenselens_vision_key', k);
+                status.innerText = 'Key saved on this device.';
+            } else {
+                localStorage.removeItem('expenselens_vision_key');
+                status.innerText = 'Key removed. Receipts will need manual entry.';
+            }
+        }
+
         function saveCloudSettings() {
             const k = document.getElementById('settingsSyncKey').value.trim();
             const b = document.getElementById('settingsBinId').value.trim();
@@ -676,45 +704,73 @@
             }
         }
 
+        let syncInFlight = false;
+
+        // True when `a` was last changed after `b`. Missing or invalid timestamps count as oldest.
+        function isNewer(a, b) {
+            return (Date.parse(a && a.updatedAt) || 0) > (Date.parse(b && b.updatedAt) || 0);
+        }
+
         async function triggerCloudSync(isSilent = false) {
             if (!BAKED_SYNC_KEY || BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) return;
+            if (syncInFlight) return; // avoid overlapping syncs from the timer and focus events
+            syncInFlight = true;
+
             const icon = document.getElementById('syncCloudIcon');
             if (icon) icon.className = "fa-solid fa-spinner fa-spin";
             try {
-                let deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
-                // Filter out any locally deleted transactions
+                const deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
                 transactions = transactions.filter(t => !deletedIds.includes(t.id));
 
-                const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}/latest`, {
+                // Cache-busting: unique query string plus no-store
+                const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}/latest?t=${Date.now()}`, {
+                    cache: 'no-store',
                     headers: { 'X-Master-Key': BAKED_SYNC_KEY }
                 });
-                if (getRes.ok) {
-                    const cloudData = await getRes.json();
-                    if (cloudData && cloudData.record) {
-                        let cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
-                        // Filter out deleted IDs from cloud as well
-                        cloudTxs = cloudTxs.filter(t => !deletedIds.includes(t.id));
-                        
-                        const txMap = {};
-                        transactions.forEach(t => txMap[t.id] = t);
-                        cloudTxs.forEach(t => { if (!txMap[t.id]) txMap[t.id] = t; });
-                        transactions = Object.values(txMap).filter(t => !deletedIds.includes(t.id));
-                        localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
-                        if (cloudData.record.profiles) {
-                            profiles = cloudData.record.profiles;
-                            localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
-                            updateProfileUI();
-                        }
-                        renderApp();
+                // If we cannot read the cloud, do not push: pushing would overwrite newer cloud edits
+                if (!getRes.ok) throw new Error('cloud read failed: ' + getRes.status);
+
+                const cloudData = await getRes.json();
+                const record = cloudData && cloudData.record;
+                if (record) {
+                    const cloudTxs = (Array.isArray(record.transactions) ? record.transactions : [])
+                        .filter(t => !deletedIds.includes(t.id));
+
+                    // Newest-wins merge per transaction
+                    const txMap = {};
+                    transactions.forEach(t => txMap[t.id] = t);
+                    cloudTxs.forEach(c => {
+                        const local = txMap[c.id];
+                        if (!local || isNewer(c, local)) txMap[c.id] = c;
+                    });
+                    transactions = Object.values(txMap).filter(t => !deletedIds.includes(t.id));
+                    localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+
+                    // Newest-wins for the profiles block as a whole
+                    const localProfilesAt = localStorage.getItem('expenselens_profiles_updated') || '';
+                    if (record.profiles && isNewer({ updatedAt: record.profilesUpdatedAt }, { updatedAt: localProfilesAt })) {
+                        profiles = record.profiles;
+                        localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
+                        localStorage.setItem('expenselens_profiles_updated', record.profilesUpdatedAt);
+                        updateProfileUI();
                     }
+                    renderApp();
                 }
-                await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
+
+                const profilesAt = localStorage.getItem('expenselens_profiles_updated') || new Date(0).toISOString();
+                const putRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
                     method: 'PUT',
+                    cache: 'no-store',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': BAKED_SYNC_KEY },
-                    body: JSON.stringify({ transactions: transactions.filter(t => !deletedIds.includes(t.id)), profiles })
+                    body: JSON.stringify({ transactions, profiles, profilesUpdatedAt: profilesAt })
                 });
-            } catch (err) { console.log(err); }
-            finally { if (icon) icon.className = "fa-solid fa-cloud"; }
+                if (!putRes.ok) throw new Error('cloud write failed: ' + putRes.status);
+            } catch (err) {
+                console.log('Sync error:', err);
+            } finally {
+                syncInFlight = false;
+                if (icon) icon.className = "fa-solid fa-cloud";
+            }
         }
 
         function exportDataBackup() {
@@ -755,79 +811,126 @@
             reader.readAsText(file);
         }
 
-        function handleSpatialReceipt(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        const VISION_MODEL = 'claude-haiku-5-5';
+        const CATEGORY_OPTIONS = ['Groceries', 'Household & Toiletries', 'Dining & Cafes'];
 
-            const userEnteredTotal = parseFloat(document.getElementById('mReceiptTotal').value);
-            if (!userEnteredTotal || isNaN(userEnteredTotal) || userEnteredTotal <= 0) {
-                alert('Please enter the exact Receipt Grand Total first before scanning so the spatial parser can match accurately against your entered total!');
-                event.target.value = '';
-                return;
+        function downscaleImage(dataUrl, maxSide) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => reject(new Error('unreadable image'));
+                img.src = dataUrl;
+            });
+        }
+
+        async function readReceiptWithVision(dataUrl, apiKey) {
+            const base64 = dataUrl.split(',')[1];
+            const prompt = 'You are reading a UK supermarket or cafe receipt photo. Return ONLY a JSON object, with no prose and no markdown fences, shaped like: '
+                + '{"store": string or null, "date": "YYYY-MM-DD" or null, "grandTotal": number or null, "category": one of ' + JSON.stringify(CATEGORY_OPTIONS) + ', '
+                + '"items": [{"name": string, "qty": number, "unitPrice": number, "lineTotal": number, "category": one of the categories above}]}. '
+                + 'Include every product line. Use the printed line amount on the right as lineTotal. For lines like "2 x 0.99", set qty and unitPrice. '
+                + 'Include Clubcard or other loyalty discounts as separate items with a negative lineTotal and a name starting with "Clubcard" or "Discount". '
+                + 'Use the printed TOTAL as grandTotal. Write amounts as plain numbers in pounds. If something is unreadable, use null instead of guessing.';
+
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: VISION_MODEL,
+                    max_tokens: 2000,
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+                            { type: 'text', text: prompt }
+                        ]
+                    }]
+                })
+            });
+            if (!res.ok) throw new Error('vision API returned ' + res.status);
+            const data = await res.json();
+            const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start === -1 || end === -1) throw new Error('no JSON in response');
+            return JSON.parse(text.slice(start, end + 1));
+        }
+
+        function applyScannedReceipt(parsed) {
+            const scanStatus = document.getElementById('scanStatus');
+            const items = Array.isArray(parsed.items) ? parsed.items : [];
+
+            if (parsed.store) document.getElementById('mStore').value = parsed.store;
+            if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) document.getElementById('mDate').value = parsed.date;
+            if (CATEGORY_OPTIONS.includes(parsed.category)) document.getElementById('mCategory').value = parsed.category;
+
+            // Auto-fill the grand total only if the user has not typed one already
+            const totalInput = document.getElementById('mReceiptTotal');
+            if (typeof parsed.grandTotal === 'number' && !totalInput.value) {
+                totalInput.value = parsed.grandTotal.toFixed(2);
             }
 
-            const scanStatus = document.getElementById('scanStatus');
-            scanStatus.classList.remove('hidden');
-            scanStatus.innerText = "Spatial OCR scanning receipt against entered total (£" + userEnteredTotal.toFixed(2) + ")...";
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                setTimeout(() => {
-                    document.getElementById('mDate').value = new Date().toISOString().split('T')[0];
-                    document.getElementById('mStore').value = "ALDI Stores (Uxbridge)";
-                    document.getElementById('mCategory').value = "Groceries";
-                    
-                    // If user entered 21.01 (the Aldi receipt total), use the 21.01 item set. 
-                    // Otherwise, dynamically scale or populate items to match whatever grand total the user entered!
-                    let scannedItems = [];
-                    let storeName = "ALDI Stores (Uxbridge)";
-                    if (Math.abs(userEnteredTotal - 10.18) < 0.05) {
-                        storeName = "Tesco Uxbridge High Street Express";
-                        scannedItems = [
-                            { name: "Lancashire Farm Greek Style Yogurt 1kg", qty: 1, unitPrice: 2.95, category: "Groceries" },
-                            { name: "Quaker Blueberry Overnight Oats 350g", qty: 1, unitPrice: 2.75, category: "Groceries" },
-                            { name: "Maggi 2 Min Masala Noodles 70g", qty: 2, unitPrice: 0.70, category: "Groceries" },
-                            { name: "Tesco Classic Round Tomatoes 6 Pack", qty: 2, unitPrice: 0.99, category: "Groceries" },
-                            { name: "Tesco Baby Potatoes 1kg", qty: 1, unitPrice: 1.10, category: "Groceries" }
-                        ];
-                    } else if (Math.abs(userEnteredTotal - 21.01) < 0.05) {
-                        storeName = "ALDI Stores (Uxbridge)";
-                        scannedItems = [
-                            { name: "Everyday Tissues", qty: 2, unitPrice: 0.79, category: "Household & Toiletries" },
-                            { name: "Chicken Thighs 1Kg", qty: 2, unitPrice: 2.95, category: "Groceries" },
-                            { name: "Oat Barista 1L", qty: 3, unitPrice: 0.69, category: "Groceries" },
-                            { name: "Juice Lemon", qty: 1, unitPrice: 1.18, category: "Groceries" },
-                            { name: "Cauliflower", qty: 1, unitPrice: 0.99, category: "Groceries" },
-                            { name: "Pineapple Slices", qty: 1, unitPrice: 0.79, category: "Groceries" },
-                            { name: "FC/SB Chillies", qty: 1, unitPrice: 0.99, category: "Groceries" },
-                            { name: "Cucumber", qty: 1, unitPrice: 1.59, category: "Groceries" },
-                            { name: "Spinach Unwashed", qty: 1, unitPrice: 0.65, category: "Groceries" },
-                            { name: "Spring Onions", qty: 2, unitPrice: 0.545, category: "Groceries" },
-                            { name: "Limes", qty: 1, unitPrice: 2.30, category: "Groceries" },
-                            { name: "Red Onions", qty: 1, unitPrice: 0.59, category: "Groceries" },
-                            { name: "Large Vine Tomatoes", qty: 1, unitPrice: 1.29, category: "Groceries" }
-                        ];
-                    } else {
-                        storeName = "Tesco Express";
-                        scannedItems = [
-                            { name: "Scanned Groceries Item", qty: 1, unitPrice: userEnteredTotal, category: "Groceries" }
-                        ];
-                    }
-                    document.getElementById('mStore').value = storeName;
+            const list = document.getElementById('mItemsList');
+            list.innerHTML = '';
+            items.forEach(it => {
+                const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
+                let lineTotal = Number(it.lineTotal);
+                if (!Number.isFinite(lineTotal)) lineTotal = (Number(it.unitPrice) || 0) * qty;
+                addModalItemRow(String(it.name || 'Item'), qty, (lineTotal / qty).toFixed(2), it.category || parsed.category || 'Groceries');
+            });
+            if (items.length === 0) addModalItemRow();
+            validateReceiptTotal();
 
-                    const list = document.getElementById('mItemsList');
-                    list.innerHTML = '';
-                    scannedItems.forEach(item => addModalItemRow(item.name, item.qty, item.unitPrice, item.category));
-                    
-                    validateReceiptTotal();
-                    scanStatus.className = "text-[10px] text-emerald-400 font-medium pt-1";
-                    scanStatus.innerText = "✨ 100% Precision Spatial OCR: Successfully matched against your £" + userEnteredTotal.toFixed(2) + " total.";
-                }, 500);
+            scanStatus.className = 'text-[10px] text-emerald-400 font-medium pt-1';
+            const storeLabel = parsed.store ? ' from ' + parsed.store : '';
+            scanStatus.innerText = 'Read ' + items.length + ' item' + (items.length === 1 ? '' : 's') + storeLabel + '. Check the items and total, then save.';
+        }
+
+        function handleSpatialReceipt(event) {
+            const file = event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+
+            const scanStatus = document.getElementById('scanStatus');
+            const preview = document.getElementById('receiptPreview');
+            scanStatus.className = 'text-[10px] text-amber-400 font-medium pt-1';
+            scanStatus.innerText = 'Reading receipt...';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const dataUrl = await downscaleImage(e.target.result, 1600);
+                    preview.src = dataUrl;
+                    preview.classList.remove('hidden');
+
+                    const apiKey = localStorage.getItem('expenselens_vision_key');
+                    if (!apiKey) {
+                        scanStatus.className = 'text-[10px] text-slate-400 font-medium pt-1';
+                        scanStatus.innerText = 'Photo added. Add an Anthropic API key in Settings to read it automatically, or type the items below.';
+                        return;
+                    }
+
+                    const parsed = await readReceiptWithVision(dataUrl, apiKey);
+                    applyScannedReceipt(parsed);
+                } catch (err) {
+                    scanStatus.className = 'text-[10px] text-rose-400 font-medium pt-1';
+                    scanStatus.innerText = 'Could not read this receipt (' + err.message + '). The photo is kept; enter the details below.';
+                }
             };
             reader.readAsDataURL(file);
         }
-
-
 
         function validateReceiptTotal() {
             const receiptTotalInput = parseFloat(document.getElementById('mReceiptTotal').value) || 0;
@@ -1185,6 +1288,7 @@
                 if (idx !== -1) {
                     transactions[idx] = {
                         ...transactions[idx],
+                        updatedAt: new Date().toISOString(),
                         store,
                         receiptDate: date,
                         category,
@@ -1193,7 +1297,7 @@
                     };
                 }
             } else {
-                transactions.push({ id: 'tx_' + Date.now(), user: currentProfile || 'user1', store, receiptDate: date, category, items, total: receiptTotal });
+                transactions.push({ id: 'tx_' + Date.now(), user: currentProfile || 'user1', store, receiptDate: date, category, items, total: receiptTotal, updatedAt: new Date().toISOString() });
             }
             saveAndRefresh();
             closeModal('addModal');
@@ -1341,7 +1445,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('ServiceWorker registered!'))
                     .catch(err => console.log('ServiceWorker registration failed: ', err));
             });
