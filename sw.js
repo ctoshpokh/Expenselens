@@ -1,4 +1,4 @@
-const CACHE_NAME = 'receiptiq-v6-cors-sync-fix';
+const CACHE_NAME = 'receiptiq-v7-cloud-state-sync';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {

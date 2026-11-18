@@ -616,8 +616,10 @@
             document.getElementById('nameUser2').innerText = profiles.user2.name || "Ashmita";
             document.getElementById('avatarDisplayUser2').innerHTML = `<i class="fa-solid ${profiles.user2.icon || 'fa-user-nurse'}"></i>`;
 
-            document.getElementById('optUser1').innerText = (profiles.user1.name || "Sitosh") + " Only";
-            document.getElementById('optUser2').innerText = (profiles.user2.name || "Ashmita") + " Only";
+            const opt1 = document.getElementById('optUser1');
+            const opt2 = document.getElementById('optUser2');
+            if (opt1) opt1.innerText = (profiles.user1.name || "Sitosh") + " Only";
+            if (opt2) opt2.innerText = (profiles.user2.name || "Ashmita") + " Only";
             document.getElementById('masterBannerSub').innerText = `Comparing ${profiles.user1.name || "Sitosh"} & ${profiles.user2.name || "Ashmita"}`;
         }
 
@@ -813,7 +815,7 @@
                     detail.innerText = text;
                 }
             } else if (state === 'error') {
-                if (icon) icon.className = "fa-solid fa-cloud-exclamation text-rose-400";
+                if (icon) icon.className = "fa-solid fa-triangle-exclamation text-rose-400";
                 if (btn) btn.title = text;
                 if (badge) {
                     badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold";
@@ -881,6 +883,13 @@
                         localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                         updateProfileUI();
                     }
+                    if (cloudData.record.appearance) {
+                        const ap = cloudData.record.appearance;
+                        if (ap.theme) localStorage.setItem('expenselens_theme_combo', ap.theme);
+                        if (ap.font) localStorage.setItem('expenselens_font', ap.font);
+                        if (ap.scale) localStorage.setItem('expenselens_scale', ap.scale);
+                        applyAppearanceSettings();
+                    }
                     if (cloudData.record.geminiKey && !GEMINI_API_KEY) {
                         GEMINI_API_KEY = cloudData.record.geminiKey;
                         localStorage.setItem('expenselens_gemini_key', GEMINI_API_KEY);
@@ -902,7 +911,12 @@
                         transactions: transactions.filter(t => !deletedIds.includes(t.id)),
                         deletedIds,
                         profiles,
-                        geminiKey: GEMINI_API_KEY || undefined
+                        geminiKey: GEMINI_API_KEY || undefined,
+                        appearance: {
+                            theme: localStorage.getItem('expenselens_theme_combo') || 'emerald',
+                            font: localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif",
+                            scale: localStorage.getItem('expenselens_scale') || 'normal'
+                        }
                     })
                 });
 
@@ -2034,21 +2048,26 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
         function setThemeCombo(combo) {
             localStorage.setItem('expenselens_theme_combo', combo);
             applyAppearanceSettings();
+            triggerCloudSync(true);
         }
 
         function setFontFamily(font) {
             localStorage.setItem('expenselens_font', font);
             applyAppearanceSettings();
+            triggerCloudSync(true);
         }
 
         function setTextScale(scale) {
             localStorage.setItem('expenselens_scale', scale);
             applyAppearanceSettings();
+            triggerCloudSync(true);
         }
 
         function applyAppearanceSettings() {
             const font = localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif";
             document.body.style.fontFamily = font;
+            const fontSel = document.getElementById('settingsFontSelect');
+            if (fontSel) fontSel.value = font;
 
             const scale = localStorage.getItem('expenselens_scale') || 'normal';
             if (scale === 'compact') {
@@ -2081,7 +2100,7 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
                 }
             });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=7', { updateViaCache: 'none' })
                     .then(reg => {
                         reg.update();
                         console.log('ServiceWorker registered & checked for updates!');
