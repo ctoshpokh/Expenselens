@@ -1,5 +1,5 @@
-const CACHE_NAME = 'receiptiq-v2-live-ocr';
-const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32x32.png'];
+const CACHE_NAME = 'receiptiq-v3-fix';
+const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

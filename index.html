@@ -1005,8 +1005,7 @@ Rules:
             await worker.terminate();
 
             const rawText = ret.data.text || '';
-            const lines = rawText.split(/?
-/).map(l => l.trim()).filter(Boolean);
+            const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
             // Detect Store Name from top lines
             const knownStores = ['TESCO', 'ALDI', 'LIDL', 'SAINSBURY', 'ASDA', 'MORRISONS', 'WAITROSE', 'MARKS', 'M&S', 'CO-OP', 'ICELAND', 'BOOTS', 'SUPERDRUG', 'GREGGS', 'PRET', 'COSTA', 'STARBUCKS', 'WENZEL'];
@@ -1026,7 +1025,7 @@ Rules:
             // Detect Date (DD/MM/YYYY or DD/MM/YY or YYYY-MM-DD)
             let detectedDate = new Date().toISOString().split('T')[0];
             for (const line of lines) {
-                const dmy = line.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2}|\d{2})/);
+                const dmy = line.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2}|\d{2})\b/);
                 if (dmy) {
                     const day = dmy[1].padStart(2, '0');
                     const month = dmy[2].padStart(2, '0');
@@ -1706,7 +1705,7 @@ Rules:
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('ServiceWorker registered!'))
                     .catch(err => console.log('ServiceWorker registration failed: ', err));
             });
