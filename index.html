@@ -454,16 +454,23 @@
                     <div id="scanStatus" class="text-[10px] text-amber-400 hidden font-medium"></div>
                 </div>
 
-                <div id="grandTotalCard" class="bg-slate-950/80 border border-white/10 rounded-3xl p-3.5 space-y-2 transition-all">
+                <div id="grandTotalCard" class="bg-slate-950/80 border border-white/10 rounded-3xl p-3.5 space-y-2.5 transition-all">
+                    <div class="flex justify-between items-center gap-2">
+                        <label class="text-slate-300 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-receipt text-emerald-400"></i> Your Receipt Total</label>
+                        <span id="aiCalculatedSumBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold">AI Items Sum: £0.00</span>
+                    </div>
                     <div class="flex justify-between items-center">
-                        <label class="text-slate-300 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-receipt text-emerald-400"></i> Receipt Grand Total</label>
-                        <span id="crossCheckBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">Auto-fills on scan</span>
+                        <span class="text-[10px] text-slate-400">Independent Cross-Check Status</span>
+                        <span id="crossCheckBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">Awaiting manual total</span>
                     </div>
                     <div class="relative">
                         <span class="absolute left-3.5 top-2.5 text-slate-400 font-bold">£</span>
-                        <input type="number" step="0.01" id="mReceiptTotal" oninput="validateReceiptTotal()" placeholder="Enter or confirm receipt total" class="w-full bg-slate-900 border border-white/10 rounded-2xl pl-8 pr-3 py-2.5 text-white font-bold text-sm focus:outline-none focus:border-emerald-500">
+                        <input type="number" step="0.01" id="mReceiptTotal" oninput="validateReceiptTotal()" placeholder="Enter printed receipt total manually" class="w-full bg-slate-900 border border-white/10 rounded-2xl pl-8 pr-3 py-2.5 text-white font-bold text-sm focus:outline-none focus:border-emerald-500">
                     </div>
-                    <div id="crossCheckMessage" class="text-[10px] text-slate-400">Scan a receipt or enter the grand total manually.</div>
+                    <div id="crossCheckMessage" class="text-[10px] text-slate-400 leading-relaxed">Enter the grand total printed on your receipt to cross-check AI's line items.</div>
+                    <button type="button" id="aiReAuditBtn" onclick="reAuditWithUserTotal()" class="hidden w-full py-2 px-3 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI to Re-Audit & Fix Discrepancy
+                    </button>
                 </div>
 
                 <div>
@@ -922,71 +929,164 @@
 
         // Primary Engine: Real-Time Google Gemini Vision OCR
         async function scanWithGeminiVision(base64Data, mimeType, apiKey) {
-            const prompt = `Extract all receipt details from this UK retail/supermarket/restaurant receipt image.
-Return ONLY valid JSON with this exact schema (no markdown fences):
+            const basePrompt = `You are a precision UK supermarket & retail receipt auditor. Extract all receipt details from this image.
+Return ONLY valid JSON matching this exact schema (no markdown fences):
 {
   "store": "Merchant/Store Name (e.g. Tesco Express, Aldi, Lidl, Sainsbury's, Asda, M&S)",
-  "date": "YYYY-MM-DD (if not visible, use today's date)",
+  "date": "YYYY-MM-DD",
   "category": "Groceries" | "Household & Toiletries" | "Dining & Cafes",
+  "subtotalBeforeDiscounts": 0.00,
+  "totalDiscounts": 0.00,
   "grandTotal": 0.00,
   "items": [
     {
       "name": "Clean item description",
       "qty": 1,
       "unitPrice": 0.00,
+      "lineTotal": 0.00,
       "category": "Groceries" | "Household & Toiletries" | "Dining & Cafes"
     }
   ]
 }
-Rules:
-- Extract every purchased line item and its final line price.
-- If a multi-buy or Clubcard/loyalty discount line appears below an item (negative price), either deduct it from that item's unitPrice or include it as a negative unitPrice item so the sum of items matches grandTotal.
-- Do not include VAT summaries, payment card details, or change due as items.`;
+
+CRITICAL UK RECEIPT MATH RULES (DO NOT VIOLATE):
+1. On UK receipts (Tesco, Aldi, Lidl, Sainsbury's, Asda), the rightmost column on an item line is ALWAYS the EXTENDED LINE TOTAL (for all units on that line), NOT the single-unit price!
+   - Example: "2 Tesco Classic Round Tomatoes 6 Pack £1.98" with "£0.99 each" below it -> qty = 2, unitPrice = 0.99, lineTotal = 1.98. NEVER put 1.98 as unitPrice when qty = 2!
+   - Always enforce: qty * unitPrice === lineTotal.
+2. Clubcard / Nectar / Lidl Plus / multi-buy discounts:
+   - Example: "1 Lancashire Farm Yogurt £3.70" followed by "Cc £2.95 -£0.75" -> final lineTotal is 2.95, qty = 1, unitPrice = 2.95.
+   - Example: "2 Maggi Noodles £1.80 (£0.90 each)" followed by "Cc 70p -£0.40" -> final lineTotal is 1.40, qty = 2, unitPrice = 0.70.
+3. SELF-CHECK BEFORE RESPONDING:
+   - Sum all items' final lineTotal values. That sum MUST equal grandTotal (and subtotalBeforeDiscounts - totalDiscounts).
+   - If your item sum does not match grandTotal, re-inspect every qty, unitPrice, and discount line until sum(items.lineTotal) === grandTotal.`;
 
             const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
-            let lastErr = null;
 
-            for (const modelName of modelsToTry) {
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-goog-api-key': apiKey
-                        },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: prompt },
-                                    {
-                                        inline_data: {
-                                            mime_type: mimeType,
-                                            data: base64Data
+            async function callGemini(promptText) {
+                let lastErr = null;
+                for (const modelName of modelsToTry) {
+                    try {
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-goog-api-key': apiKey
+                            },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { text: promptText },
+                                        {
+                                            inline_data: {
+                                                mime_type: mimeType,
+                                                data: base64Data
+                                            }
                                         }
-                                    }
-                                ]
-                            }],
-                            generationConfig: {
-                                temperature: 0.1,
-                                responseMimeType: "application/json"
-                            }
-                        })
-                    });
+                                    ]
+                                }],
+                                generationConfig: {
+                                    temperature: 0.0,
+                                    responseMimeType: "application/json"
+                                }
+                            })
+                        });
 
-                    if (!response.ok) {
-                        const errJson = await response.json().catch(() => ({}));
-                        throw new Error(errJson?.error?.message || `HTTP ${response.status}`);
+                        if (!response.ok) {
+                            const errJson = await response.json().catch(() => ({}));
+                            throw new Error(errJson?.error?.message || `HTTP ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                        return JSON.parse(cleaned);
+                    } catch (err) {
+                        lastErr = err;
                     }
+                }
+                throw lastErr || new Error('Gemini Vision scan failed');
+            }
 
-                    const result = await response.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    return JSON.parse(cleaned);
-                } catch (err) {
-                    lastErr = err;
+            // Pass 1: Extract structured receipt data
+            let parsed = await callGemini(basePrompt);
+            parsed = reconcileExtractedReceipt(parsed);
+
+            // Pass 2 (Self-Correction Audit Loop): If after deterministic reconciliation the sum still differs from grandTotal, ask Gemini to audit & fix the exact discrepancy!
+            const checkSum = (parsed.items || []).reduce((acc, it) => acc + (Number(it.qty || 1) * Number(it.unitPrice || 0)), 0);
+            const gTotal = Number(parsed.grandTotal || 0);
+            if (gTotal > 0 && Math.abs(checkSum - gTotal) >= 0.01) {
+                const diff = +(checkSum - gTotal).toFixed(2);
+                const sign = diff > 0 ? '+' : '';
+                const auditPrompt = `${basePrompt}
+
+AUDIT CORRECTION REQUIRED:
+Your previous extraction had a math mismatch!
+- Receipt Grand Total printed on receipt: £${gTotal.toFixed(2)}
+- Sum of your extracted items (qty * unitPrice): £${checkSum.toFixed(2)}
+- Discrepancy: ${sign}£${diff.toFixed(2)}
+- Previous items JSON: ${JSON.stringify(parsed.items)}
+
+Find which item(s) had its extended lineTotal put into unitPrice instead of dividing by qty, or missed a Clubcard/promotional discount, and return the corrected JSON so sum(qty * unitPrice) === £${gTotal.toFixed(2)}.`;
+                try {
+                    const audited = await callGemini(auditPrompt);
+                    parsed = reconcileExtractedReceipt(audited);
+                } catch (auditErr) {
+                    console.warn('Second-pass audit skipped:', auditErr);
                 }
             }
-            throw lastErr || new Error('Gemini Vision scan failed');
+
+            return parsed;
+        }
+
+        // Deterministic Client-Side Math Auditor & Self-Healer
+        function reconcileExtractedReceipt(data) {
+            if (!data || !Array.isArray(data.items)) return data;
+            const grandTotal = Number(data.grandTotal || 0);
+
+            // Step 1: Normalize each item using lineTotal vs qty * unitPrice
+            data.items = data.items.map(item => {
+                const qty = Math.max(1, Math.round(Number(item.qty) || 1));
+                let unitPrice = Number(item.unitPrice) || 0;
+                const lineTotal = item.lineTotal !== undefined ? Number(item.lineTotal) : null;
+
+                if (lineTotal !== null && lineTotal > 0) {
+                    // If AI put lineTotal into unitPrice when qty > 1 (e.g. qty=2, unitPrice=1.98, lineTotal=1.98)
+                    if (qty > 1 && Math.abs(unitPrice - lineTotal) < 0.01 && Math.abs((qty * unitPrice) - lineTotal) >= 0.01) {
+                        unitPrice = +(lineTotal / qty).toFixed(4);
+                    } else if (Math.abs((qty * unitPrice) - lineTotal) >= 0.01) {
+                        unitPrice = +(lineTotal / qty).toFixed(4);
+                    }
+                }
+                return {
+                    ...item,
+                    qty,
+                    unitPrice: +unitPrice.toFixed(2),
+                    lineTotal: +(qty * unitPrice).toFixed(2)
+                };
+            });
+
+            // Step 2: Detect classic "double-counted qty * lineTotal" on a single item when grandTotal is known
+            if (grandTotal > 0) {
+                const currentSum = data.items.reduce((s, it) => s + (it.qty * it.unitPrice), 0);
+                const excess = +(currentSum - grandTotal).toFixed(2);
+                if (excess > 0.01) {
+                    // Check if dividing one multi-qty item's unitPrice by its qty resolves the exact excess!
+                    for (let i = 0; i < data.items.length; i++) {
+                        const it = data.items[i];
+                        if (it.qty > 1) {
+                            const fixedUnit = +(it.unitPrice / it.qty).toFixed(2);
+                            const savedAmount = +((it.qty * it.unitPrice) - (it.qty * fixedUnit)).toFixed(2);
+                            if (Math.abs(savedAmount - excess) < 0.02) {
+                                data.items[i].unitPrice = fixedUnit;
+                                data.items[i].lineTotal = +(it.qty * fixedUnit).toFixed(2);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return data;
         }
 
         // Fallback Engine: On-Device Tesseract.js OCR + Heuristic Receipt Line Parser
@@ -1142,6 +1242,14 @@ Rules:
                 if (extracted.date) document.getElementById('mDate').value = extracted.date;
                 if (extracted.category) document.getElementById('mCategory').value = extracted.category;
 
+                extracted = reconcileExtractedReceipt(extracted);
+                window.lastScannedReceiptImage = {
+                    base64: compressed.base64,
+                    mimeType: compressed.mimeType,
+                    dataUrl: compressed.dataUrl
+                };
+
+                // Keep mReceiptTotal blank unless user already typed one before scanning, so user provides independent ground truth!
                 const list = document.getElementById('mItemsList');
                 if (extracted.items && extracted.items.length > 0) {
                     list.innerHTML = '';
@@ -1155,26 +1263,29 @@ Rules:
                     });
                 }
 
-                const existingUserTotal = parseFloat(totalInput.value);
-                if (!existingUserTotal && extracted.grandTotal > 0) {
-                    totalInput.value = Number(extracted.grandTotal).toFixed(2);
-                }
-
                 validateReceiptTotal();
 
-                // Highlight Grand Total field for immediate user confirmation/entry
-                totalCard.classList.add('border-emerald-400', 'ring-2', 'ring-emerald-500/30');
-                setTimeout(() => {
-                    totalInput.focus();
-                }, 150);
-
                 const itemCount = extracted.items ? extracted.items.length : 0;
+                const aiSum = (extracted.items || []).reduce((acc, it) => acc + (Number(it.qty || 1) * Number(it.unitPrice || 0)), 0);
+
                 if (itemCount > 0) {
                     scanStatus.className = "text-[10px] text-emerald-400 font-semibold";
-                    scanStatus.innerText = `✓ ${engineUsed}: Extracted ${itemCount} items. Confirm Grand Total below.`;
+                    scanStatus.innerText = `✓ ${engineUsed}: Extracted ${itemCount} items (AI sum: £${aiSum.toFixed(2)}).`;
                 } else {
                     scanStatus.className = "text-[10px] text-amber-400 font-semibold";
-                    scanStatus.innerText = `⚠ ${engineUsed} read the receipt header, but line items were faint. Confirm total & add items below.`;
+                    scanStatus.innerText = `⚠ ${engineUsed} read the header, but line items were faint. Enter total & add items below.`;
+                }
+
+                // Open the manual total verification popup if user hasn't entered a manual total yet
+                if (!parseFloat(totalInput.value)) {
+                    document.getElementById('popupAiCalcTotal').innerText = `£${aiSum.toFixed(2)}`;
+                    document.getElementById('popupSkipAmt').innerText = `£${aiSum.toFixed(2)}`;
+                    document.getElementById('popupAiItemSummary').innerText = `Extracted ${itemCount} line items from ${extracted.store || 'receipt'}.`;
+                    document.getElementById('popupManualTotalInput').value = '';
+                    openModal('confirmTotalModal');
+                    setTimeout(() => {
+                        document.getElementById('popupManualTotalInput').focus();
+                    }, 150);
                 }
             } catch (err) {
                 scanStatus.className = "text-[10px] text-rose-400 font-semibold";
@@ -1185,31 +1296,216 @@ Rules:
             }
         }
 
-        function validateReceiptTotal() {
-            const receiptTotalInput = parseFloat(document.getElementById('mReceiptTotal').value) || 0;
+        async function submitPopupManualTotal() {
+            const val = parseFloat(document.getElementById('popupManualTotalInput').value);
+            if (isNaN(val) || val <= 0) {
+                alert('Please enter the total printed on your receipt.');
+                return;
+            }
+            document.getElementById('mReceiptTotal').value = val.toFixed(2);
+            closeModal('confirmTotalModal');
+            validateReceiptTotal();
+
+            // If there is a discrepancy between AI's items and the user's ground-truth receipt total, and we have the scanned photo + Gemini key, offer/auto-run targeted audit!
             const rows = document.querySelectorAll('.m-item-row');
             let sumItems = 0;
             rows.forEach(row => {
                 const qty = parseFloat(row.querySelector('.m-item-qty').value) || 1;
                 const unitPrice = parseFloat(row.querySelector('.m-item-price').value) || 0;
+                sumItems += qty * unitPrice;
+            });
+            if (Math.abs(sumItems - val) >= 0.01 && window.lastScannedReceiptImage && GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
+                await reAuditWithUserTotal();
+            }
+        }
+
+        function acceptAiCalculatedTotal() {
+            const rows = document.querySelectorAll('.m-item-row');
+            let sumItems = 0;
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.m-item-qty').value) || 1;
+                const unitPrice = parseFloat(row.querySelector('.m-item-price').value) || 0;
+                sumItems += qty * unitPrice;
+            });
+            document.getElementById('mReceiptTotal').value = sumItems.toFixed(2);
+            closeModal('confirmTotalModal');
+            validateReceiptTotal();
+        }
+
+        async function reAuditWithUserTotal() {
+            const userTotal = parseFloat(document.getElementById('mReceiptTotal').value);
+            if (!userTotal || !window.lastScannedReceiptImage || !GEMINI_API_KEY) return;
+
+            const scanStatus = document.getElementById('scanStatus');
+            const auditBtn = document.getElementById('aiReAuditBtn');
+            if (auditBtn) {
+                auditBtn.disabled = true;
+                auditBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Re-auditing receipt against £' + userTotal.toFixed(2) + '...';
+            }
+            scanStatus.classList.remove('hidden');
+            scanStatus.className = "text-[10px] text-amber-400 font-semibold";
+            scanStatus.innerText = `Auditing line items against your receipt total (£${userTotal.toFixed(2)})...`;
+
+            try {
+                const currentRows = Array.from(document.querySelectorAll('.m-item-row')).map(row => ({
+                    name: row.querySelector('.m-item-name').value,
+                    qty: parseFloat(row.querySelector('.m-item-qty').value) || 1,
+                    unitPrice: parseFloat(row.querySelector('.m-item-price').value) || 0,
+                    category: row.querySelector('.m-item-cat').value
+                }));
+                const currentSum = currentRows.reduce((s, it) => s + (it.qty * it.unitPrice), 0);
+                const diff = +(currentSum - userTotal).toFixed(2);
+                const sign = diff > 0 ? '+' : '';
+
+                const targetedPrompt = `You are a precision UK supermarket receipt auditor.
+The user confirmed the TRUE printed receipt grand total is £${userTotal.toFixed(2)}.
+Our previous extraction had these items summing to £${currentSum.toFixed(2)} (discrepancy: ${sign}£${diff.toFixed(2)}):
+${JSON.stringify(currentRows)}
+
+Re-examine the receipt image carefully:
+1. Check if any item with qty > 1 had its extended line total put into unitPrice instead of dividing by qty (e.g., 2 items costing £1.98 total = £0.99 unitPrice).
+2. Check if any Clubcard / Nectar / promotional discount line (e.g. "-£0.75", "Cc £2.95") was missed or double-counted.
+3. Check if any item was missed or misread.
+
+Return ONLY valid JSON with this exact schema:
+{
+  "items": [
+    {
+      "name": "Clean item description",
+      "qty": 1,
+      "unitPrice": 0.00,
+      "lineTotal": 0.00,
+      "category": "Groceries" | "Household & Toiletries" | "Dining & Cafes"
+    }
+  ]
+}
+Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
+
+                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': GEMINI_API_KEY.trim()
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: targetedPrompt },
+                                {
+                                    inline_data: {
+                                        mime_type: window.lastScannedReceiptImage.mimeType,
+                                        data: window.lastScannedReceiptImage.base64
+                                    }
+                                }
+                            ]
+                        }],
+                        generationConfig: {
+                            temperature: 0.0,
+                            responseMimeType: "application/json"
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    let audited = JSON.parse(cleaned);
+                    audited.grandTotal = userTotal;
+                    audited = reconcileExtractedReceipt(audited);
+
+                    if (audited.items && audited.items.length > 0) {
+                        const list = document.getElementById('mItemsList');
+                        list.innerHTML = '';
+                        audited.items.forEach(item => {
+                            addModalItemRow(
+                                item.name || 'Item',
+                                item.qty || 1,
+                                Number(item.unitPrice || 0).toFixed(2),
+                                item.category || 'Groceries'
+                            );
+                        });
+                    }
+                    validateReceiptTotal();
+                    scanStatus.className = "text-[10px] text-emerald-400 font-semibold";
+                    scanStatus.innerText = `✓ AI Re-Audit complete against £${userTotal.toFixed(2)}.`;
+                }
+            } catch (err) {
+                scanStatus.className = "text-[10px] text-rose-400 font-semibold";
+                scanStatus.innerText = "Re-audit failed: " + err.message;
+            } finally {
+                if (auditBtn) {
+                    auditBtn.disabled = false;
+                    auditBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI to Re-Audit & Fix Discrepancy';
+                }
+            }
+        }
+
+                function validateReceiptTotal() {
+            const receiptTotalInput = parseFloat(document.getElementById('mReceiptTotal').value) || 0;
+            const rows = document.querySelectorAll('.m-item-row');
+            let sumItems = 0;
+            let suspects = [];
+
+            rows.forEach((row, idx) => {
+                const name = row.querySelector('.m-item-name').value.trim() || `Item #${idx + 1}`;
+                const qty = parseFloat(row.querySelector('.m-item-qty').value) || 1;
+                const unitPrice = parseFloat(row.querySelector('.m-item-price').value) || 0;
                 const lineTotal = qty * unitPrice;
                 row.querySelector('.m-item-linetotal').innerText = `£${lineTotal.toFixed(2)}`;
                 sumItems += lineTotal;
+                if (qty > 1) {
+                    suspects.push({ name, qty, unitPrice, lineTotal });
+                }
             });
+
+            const aiCalcBadge = document.getElementById('aiCalculatedSumBadge');
+            if (aiCalcBadge) {
+                aiCalcBadge.innerText = `AI Items Sum: £${sumItems.toFixed(2)}`;
+            }
+
             const badge = document.getElementById('crossCheckBadge');
             const msg = document.getElementById('crossCheckMessage');
+            const auditBtn = document.getElementById('aiReAuditBtn');
+
             if (receiptTotalInput === 0) {
-                badge.innerText = `Line sum: £${sumItems.toFixed(2)}`;
+                badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30";
+                badge.innerText = "Awaiting manual total";
+                msg.innerText = `AI calculated £${sumItems.toFixed(2)} across ${rows.length} item(s). Enter your receipt's printed total above to verify.`;
+                if (auditBtn) auditBtn.classList.add('hidden');
                 return;
             }
-            if (Math.abs(receiptTotalInput - sumItems) < 0.01) {
+
+            const diff = +(sumItems - receiptTotalInput).toFixed(2);
+            if (Math.abs(diff) < 0.01) {
                 badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30";
-                badge.innerText = "✓ Grand Total Matched";
-                msg.innerText = "Spatial verification passed!";
+                badge.innerText = "✓ Matched (£0.00 diff)";
+                msg.innerText = `Verified: AI items sum (£${sumItems.toFixed(2)}) matches your receipt total (£${receiptTotalInput.toFixed(2)}).`;
+                if (auditBtn) auditBtn.classList.add('hidden');
             } else {
+                const sign = diff > 0 ? '+' : '-';
+                const absDiff = Math.abs(diff).toFixed(2);
+
+                // Identify likely culprit item (e.g. a multi-qty item where extended line total was entered as unit price)
+                let suspectHint = '';
+                if (diff > 0) {
+                    const culprit = suspects.find(s => Math.abs((s.lineTotal - s.unitPrice) - diff) < 0.02);
+                    if (culprit) {
+                        suspectHint = ` Likely cause: "${culprit.name}" has Qty ${culprit.qty} × £${culprit.unitPrice.toFixed(2)} = £${culprit.lineTotal.toFixed(2)} (try Price £${(culprit.unitPrice / culprit.qty).toFixed(2)} or Qty 1).`;
+                    }
+                }
+
+                const directionHint = diff > 0
+                    ? `AI items sum (£${sumItems.toFixed(2)}) is +£${absDiff} OVER your receipt total (£${receiptTotalInput.toFixed(2)}).${suspectHint}`
+                    : `AI items sum (£${sumItems.toFixed(2)}) is -£${absDiff} UNDER your receipt total (£${receiptTotalInput.toFixed(2)}). Check for a missed item.`;
+
                 badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40";
-                badge.innerText = `⚠ Mismatch (£${(sumItems - receiptTotalInput).toFixed(2)})`;
-                msg.innerText = "Calculated sum differs from receipt total.";
+                badge.innerText = `⚠ Mismatch (${sign}£${absDiff})`;
+                msg.innerText = directionHint;
+
+                if (auditBtn && window.lastScannedReceiptImage && GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 10) {
+                    auditBtn.classList.remove('hidden');
+                }
             }
         }
 
@@ -1451,6 +1747,7 @@ Rules:
         
         function openAddModal() {
             document.getElementById('editingTxId').value = '';
+            window.lastScannedReceiptImage = null;
             document.getElementById('modalTitleText').innerText = 'Add Receipt or Bank Line';
             document.getElementById('mStore').value = '';
             document.getElementById('mReceiptTotal').value = '';
@@ -1704,9 +2001,19 @@ Rules:
 
     <script>
         if ('serviceWorker' in navigator) {
+            let swRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!swRefreshing) {
+                    swRefreshing = true;
+                    window.location.reload();
+                }
+            });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('ServiceWorker registered!'))
+                navigator.serviceWorker.register('./sw.js?v=5', { updateViaCache: 'none' })
+                    .then(reg => {
+                        reg.update();
+                        console.log('ServiceWorker registered & checked for updates!');
+                    })
                     .catch(err => console.log('ServiceWorker registration failed: ', err));
             });
         }
@@ -1751,6 +2058,42 @@ Rules:
             }, false);
         }
     </script>
+
+
+    <!-- ================= MANUAL RECEIPT TOTAL CROSS-CHECK POPUP ================= -->
+    <div id="confirmTotalModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-5 space-y-4 text-xs border border-emerald-500/30">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2.5">
+                <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-scale-balanced text-emerald-400"></i> Verify Receipt Grand Total
+                </h3>
+                <button onclick="closeModal('confirmTotalModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <div class="bg-slate-950/80 border border-white/10 rounded-2xl p-3 space-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">AI Calculated from Line Items:</span>
+                    <span id="popupAiCalcTotal" class="text-sm font-extrabold text-blue-300">£0.00</span>
+                </div>
+                <p id="popupAiItemSummary" class="text-[10px] text-slate-400">Extracted 0 items from receipt.</p>
+            </div>
+            <div class="space-y-1.5">
+                <label class="block text-slate-200 font-semibold">Type the Total Printed on Your Receipt (£)</label>
+                <p class="text-[10px] text-slate-400">Enter the actual final total paid so ReceiptIQ can cross-check AI's line items and flag any +/- difference.</p>
+                <div class="relative pt-1">
+                    <span class="absolute left-3.5 top-3.5 text-slate-400 font-bold text-sm">£</span>
+                    <input type="number" step="0.01" id="popupManualTotalInput" onkeydown="if(event.key==='Enter'){submitPopupManualTotal();}" placeholder="e.g. 10.18" class="w-full bg-slate-900 border border-emerald-500/40 rounded-2xl pl-8 pr-3 py-3 text-white font-extrabold text-base focus:outline-none focus:border-emerald-400">
+                </div>
+            </div>
+            <div class="space-y-2 pt-1">
+                <button type="button" onclick="submitPopupManualTotal()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-extrabold rounded-2xl shadow-lg">
+                    Cross-Check Against AI Items
+                </button>
+                <button type="button" onclick="acceptAiCalculatedTotal()" class="w-full py-2.5 glass-pill text-slate-300 hover:text-white font-semibold rounded-2xl">
+                    Skip & Use AI Calculated (<span id="popupSkipAmt">£0.00</span>)
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
     
