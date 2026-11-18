@@ -890,7 +890,7 @@
         function saveAndRefresh() {
             localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
             renderApp();
-            triggerCloudSync(true);
+            triggerCloudSync(false); // Force immediate push & pull to cloud
         }
 
         function switchNavTab(tab) {
