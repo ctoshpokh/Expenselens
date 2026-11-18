@@ -102,7 +102,7 @@
             </button>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="triggerCloudSync()" class="glass-pill text-blue-400 p-2.5 rounded-2xl text-xs shadow hover:bg-white/15 transition" title="Sync Status">
+            <button onclick="triggerCloudSync(false, true)" class="glass-pill text-blue-400 p-2.5 rounded-2xl text-xs shadow hover:bg-white/15 transition" title="Sync Status">
                 <i id="syncCloudIcon" class="fa-solid fa-cloud"></i>
             </button>
             <button onclick="openAddModal()" id="addTxBtn" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/25">
@@ -313,7 +313,12 @@
                 <div class="space-y-2.5">
                     <div>
                         <label class="block text-slate-400 mb-1">Google Gemini API Key (Optional — Free Tier)</label>
-                        <input type="password" id="settingsGeminiKey" placeholder="AIzaSy... or AQ..." class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-mono text-[11px]">
+                        <div class="relative">
+                            <input type="text" id="settingsGeminiKey" autocomplete="off" spellcheck="false" style="-webkit-text-security: disc;" placeholder="AIzaSy... or AQ..." class="w-full bg-slate-900 border border-white/10 rounded-2xl pl-3.5 pr-10 py-2.5 text-white font-mono text-[11px]">
+                            <button type="button" onclick="const inp=document.getElementById('settingsGeminiKey'); const masked=inp.style.webkitTextSecurity==='disc'; inp.style.webkitTextSecurity=masked?'none':'disc'; this.innerHTML=masked?'<i class=\'fa-solid fa-eye-slash\'></i>':'<i class=\'fa-solid fa-eye\'></i>';" class="absolute right-3 top-2.5 text-slate-400 hover:text-white" title="Show/Hide Key">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="saveGeminiKey()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-2xl shadow-lg">Save API Key</button>
@@ -324,7 +329,13 @@
 
             <!-- JSONBin Cloud Sync -->
             <div class="glass-panel rounded-3xl p-5 space-y-4 text-xs">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-cloud text-emerald-400"></i> JSONBin Cloud Sync</h3>
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-cloud text-emerald-400"></i> JSONBin Cloud Sync</h3>
+                    <span id="cloudSyncStatusBadge" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">Ready</span>
+                </div>
+                <div id="cloudSyncStatusDetail" class="text-[10px] text-slate-400 bg-slate-950/70 border border-white/10 rounded-2xl px-3 py-2">
+                    Checking cloud connection...
+                </div>
                 <div class="space-y-2.5">
                     <div>
                         <label class="block text-slate-400 mb-1">Master Key</label>
@@ -334,7 +345,10 @@
                         <label class="block text-slate-400 mb-1">Bin ID</label>
                         <input type="text" id="settingsBinId" placeholder="6afbef..." class="w-full bg-slate-900 border border-white/10 rounded-2xl px-3.5 py-2.5 text-white font-mono text-[11px]">
                     </div>
-                    <button onclick="saveCloudSettings()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-2xl shadow-lg">Save & Sync Now</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="saveCloudSettings()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-2xl shadow-lg">Save & Sync Now</button>
+                        <button onclick="triggerCloudSync(false, true)" class="glass-pill text-blue-300 hover:bg-white/10 font-semibold py-3 rounded-2xl">Force Sync Check</button>
+                    </div>
                 </div>
             </div>
 
@@ -775,67 +789,111 @@
             }
         }
 
-        async function triggerCloudSync(isSilent = false) {
-            if (!BAKED_SYNC_KEY || BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY')) return;
+        function updateSyncStatusUI(state, text) {
             const icon = document.getElementById('syncCloudIcon');
-            if (icon) icon.className = "fa-solid fa-spinner fa-spin";
+            const btn = icon ? icon.parentElement : null;
+            const badge = document.getElementById('cloudSyncStatusBadge');
+            const detail = document.getElementById('cloudSyncStatusDetail');
+
+            if (state === 'syncing') {
+                if (icon) icon.className = "fa-solid fa-spinner fa-spin text-amber-400";
+                if (badge) {
+                    badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold";
+                    badge.innerText = "Syncing...";
+                }
+            } else if (state === 'ok') {
+                if (icon) icon.className = "fa-solid fa-cloud text-emerald-400";
+                if (btn) btn.title = text;
+                if (badge) {
+                    badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold";
+                    badge.innerText = "✓ Synced";
+                }
+                if (detail) {
+                    detail.className = "text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl px-3 py-2";
+                    detail.innerText = text;
+                }
+            } else if (state === 'error') {
+                if (icon) icon.className = "fa-solid fa-cloud-exclamation text-rose-400";
+                if (btn) btn.title = text;
+                if (badge) {
+                    badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold";
+                    badge.innerText = "⚠ Sync Error";
+                }
+                if (detail) {
+                    detail.className = "text-[10px] text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-2xl px-3 py-2";
+                    detail.innerText = text;
+                }
+            }
+        }
+
+        async function triggerCloudSync(isSilent = false, showAlert = false) {
+            if (!BAKED_SYNC_KEY || BAKED_SYNC_KEY.includes('YOUR_MASTER_KEY') || !BAKED_BIN_ID) {
+                updateSyncStatusUI('error', 'Missing JSONBin Master Key or Bin ID in Settings.');
+                return;
+            }
+            updateSyncStatusUI('syncing', 'Syncing with cloud...');
             try {
                 let deletedIds = JSON.parse(localStorage.getItem('expenselens_deleted_ids') || '[]');
                 transactions = transactions.filter(t => !deletedIds.includes(t.id));
 
+                // NOTE: Do NOT add custom Cache-Control headers on JSONBin requests (triggers CORS preflight block!).
+                // Cache-busting is handled safely via ?t=${Date.now()} query param.
                 const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}/latest?t=${Date.now()}`, {
-                    cache: 'no-store',
+                    method: 'GET',
                     headers: {
-                        'X-Master-Key': BAKED_SYNC_KEY,
-                        'Cache-Control': 'no-cache'
+                        'X-Master-Key': BAKED_SYNC_KEY
                     }
                 });
-                if (getRes.ok) {
-                    const cloudData = await getRes.json();
-                    if (cloudData && cloudData.record) {
-                        let cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
-                        const cloudDeleted = Array.isArray(cloudData.record.deletedIds) ? cloudData.record.deletedIds : [];
-                        deletedIds = Array.from(new Set([...deletedIds, ...cloudDeleted]));
-                        localStorage.setItem('expenselens_deleted_ids', JSON.stringify(deletedIds));
 
-                        cloudTxs = cloudTxs.filter(t => !deletedIds.includes(t.id));
-                        
-                        const txMap = {};
-                        transactions.forEach(t => txMap[t.id] = t);
-                        cloudTxs.forEach(ct => {
-                            const lt = txMap[ct.id];
-                            if (!lt) {
-                                txMap[ct.id] = ct;
-                            } else {
-                                const cTime = new Date(ct.updatedAt || 0).getTime();
-                                const lTime = new Date(lt.updatedAt || 0).getTime();
-                                if (cTime > lTime) {
-                                    txMap[ct.id] = ct;
-                                }
-                            }
-                        });
-                        transactions = Object.values(txMap).filter(t => !deletedIds.includes(t.id));
-                        localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
-
-                        if (cloudData.record.profiles) {
-                            profiles = cloudData.record.profiles;
-                            localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
-                            updateProfileUI();
-                        }
-                        if (cloudData.record.geminiKey && !GEMINI_API_KEY) {
-                            GEMINI_API_KEY = cloudData.record.geminiKey;
-                            localStorage.setItem('expenselens_gemini_key', GEMINI_API_KEY);
-                            if (document.getElementById('settingsGeminiKey')) {
-                                document.getElementById('settingsGeminiKey').value = GEMINI_API_KEY;
-                            }
-                            updateOcrBadgeUI();
-                        }
-                        renderApp();
-                    }
+                if (!getRes.ok) {
+                    const errBody = await getRes.text().catch(() => '');
+                    throw new Error(`Cloud GET failed (HTTP ${getRes.status}): ${errBody.slice(0, 100)}`);
                 }
-                await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
+
+                const cloudData = await getRes.json();
+                if (cloudData && cloudData.record) {
+                    let cloudTxs = Array.isArray(cloudData.record.transactions) ? cloudData.record.transactions : [];
+                    const cloudDeleted = Array.isArray(cloudData.record.deletedIds) ? cloudData.record.deletedIds : [];
+                    deletedIds = Array.from(new Set([...deletedIds, ...cloudDeleted]));
+                    localStorage.setItem('expenselens_deleted_ids', JSON.stringify(deletedIds));
+
+                    cloudTxs = cloudTxs.filter(t => !deletedIds.includes(t.id));
+                    
+                    const txMap = {};
+                    transactions.forEach(t => txMap[t.id] = t);
+                    cloudTxs.forEach(ct => {
+                        const lt = txMap[ct.id];
+                        if (!lt) {
+                            txMap[ct.id] = ct;
+                        } else {
+                            const cTime = new Date(ct.updatedAt || 0).getTime();
+                            const lTime = new Date(lt.updatedAt || 0).getTime();
+                            if (cTime > lTime) {
+                                txMap[ct.id] = ct;
+                            }
+                        }
+                    });
+                    transactions = Object.values(txMap).filter(t => !deletedIds.includes(t.id));
+                    localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
+
+                    if (cloudData.record.profiles) {
+                        profiles = cloudData.record.profiles;
+                        localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
+                        updateProfileUI();
+                    }
+                    if (cloudData.record.geminiKey && !GEMINI_API_KEY) {
+                        GEMINI_API_KEY = cloudData.record.geminiKey;
+                        localStorage.setItem('expenselens_gemini_key', GEMINI_API_KEY);
+                        if (document.getElementById('settingsGeminiKey')) {
+                            document.getElementById('settingsGeminiKey').value = GEMINI_API_KEY;
+                        }
+                        updateOcrBadgeUI();
+                    }
+                    renderApp();
+                }
+
+                const putRes = await fetch(`https://api.jsonbin.io/v3/b/${BAKED_BIN_ID}`, {
                     method: 'PUT',
-                    cache: 'no-store',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Master-Key': BAKED_SYNC_KEY
@@ -847,8 +905,22 @@
                         geminiKey: GEMINI_API_KEY || undefined
                     })
                 });
-            } catch (err) { console.log('Sync warning:', err); }
-            finally { if (icon) icon.className = "fa-solid fa-cloud"; }
+
+                if (!putRes.ok) {
+                    const errBody = await putRes.text().catch(() => '');
+                    throw new Error(`Cloud PUT failed (HTTP ${putRes.status}): ${errBody.slice(0, 100)}`);
+                }
+
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const statusMsg = `Last synced at ${timeStr} • ${transactions.length} total receipts in cloud`;
+                updateSyncStatusUI('ok', statusMsg);
+                if (showAlert) alert('Sync successful! ' + statusMsg);
+            } catch (err) {
+                console.error('Cloud sync error:', err);
+                const errMsg = `Sync failed: ${err.message}`;
+                updateSyncStatusUI('error', errMsg);
+                if (showAlert) alert(errMsg);
+            }
         }
 
         function exportDataBackup() {
@@ -2009,7 +2081,7 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
                 }
             });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=5', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=6', { updateViaCache: 'none' })
                     .then(reg => {
                         reg.update();
                         console.log('ServiceWorker registered & checked for updates!');

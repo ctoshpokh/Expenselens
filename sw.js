@@ -1,4 +1,4 @@
-const CACHE_NAME = 'receiptiq-v5-manual-verify';
+const CACHE_NAME = 'receiptiq-v6-cors-sync-fix';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
