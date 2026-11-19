@@ -656,6 +656,7 @@
             if (userKey && profiles[userKey]) {
                 if (newName) profiles[userKey].name = newName;
                 if (selectedIconChoice) profiles[userKey].icon = selectedIconChoice;
+                profiles[userKey].updatedAt = new Date().toISOString();
                 
                 localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                 updateProfileUI();
@@ -719,6 +720,7 @@
                 }
             }
             
+            applyAppearanceSettings();
             switchNavTab('ledger');
             triggerCloudSync(true);
         }
@@ -879,15 +881,35 @@
                     localStorage.setItem('expenselens_multi_txs', JSON.stringify(transactions));
 
                     if (cloudData.record.profiles) {
-                        profiles = cloudData.record.profiles;
+                        ['user1', 'user2', 'Master'].forEach(pk => {
+                            const cp = cloudData.record.profiles[pk];
+                            const lp = profiles[pk];
+                            if (cp) {
+                                const cTime = new Date(cp.updatedAt || 0).getTime();
+                                const lTime = new Date((lp && lp.updatedAt) || 0).getTime();
+                                if (!lp || cTime >= lTime) {
+                                    profiles[pk] = { ...(lp || {}), ...cp };
+                                }
+                            }
+                        });
                         localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                         updateProfileUI();
+                        applyAppearanceSettings();
                     }
-                    if (cloudData.record.appearance) {
-                        const ap = cloudData.record.appearance;
-                        if (ap.theme) localStorage.setItem('expenselens_theme_combo', ap.theme);
-                        if (ap.font) localStorage.setItem('expenselens_font', ap.font);
-                        if (ap.scale) localStorage.setItem('expenselens_scale', ap.scale);
+                    if (cloudData.record.profileAppearance) {
+                        ['user1', 'user2', 'Master'].forEach(pk => {
+                            const cap = cloudData.record.profileAppearance[pk];
+                            if (cap) {
+                                const lap = (profiles[pk] && profiles[pk].appearance) || {};
+                                const cTime = new Date(cap.updatedAt || 0).getTime();
+                                const lTime = new Date(lap.updatedAt || 0).getTime();
+                                if (cTime >= lTime) {
+                                    if (!profiles[pk]) profiles[pk] = {};
+                                    profiles[pk].appearance = { ...lap, ...cap };
+                                }
+                            }
+                        });
+                        localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
                         applyAppearanceSettings();
                     }
                     if (cloudData.record.geminiKey && !GEMINI_API_KEY) {
@@ -912,10 +934,10 @@
                         deletedIds,
                         profiles,
                         geminiKey: GEMINI_API_KEY || undefined,
-                        appearance: {
-                            theme: localStorage.getItem('expenselens_theme_combo') || 'emerald',
-                            font: localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif",
-                            scale: localStorage.getItem('expenselens_scale') || 'normal'
+                        profileAppearance: {
+                            user1: (profiles.user1 && profiles.user1.appearance) || undefined,
+                            user2: (profiles.user2 && profiles.user2.appearance) || undefined,
+                            Master: (profiles.Master && profiles.Master.appearance) || undefined
                         }
                     })
                 });
@@ -2045,31 +2067,55 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
             });
         }
 
-        function setThemeCombo(combo) {
-            localStorage.setItem('expenselens_theme_combo', combo);
+        function getActiveProfileAppearance() {
+            const pk = currentProfile || 'user1';
+            if (!profiles[pk]) profiles[pk] = {};
+            if (!profiles[pk].appearance) {
+                profiles[pk].appearance = {
+                    theme: localStorage.getItem(`expenselens_theme_${pk}`) || 'emerald',
+                    font: localStorage.getItem(`expenselens_font_${pk}`) || "'Plus Jakarta Sans', sans-serif",
+                    scale: localStorage.getItem(`expenselens_scale_${pk}`) || 'normal',
+                    updatedAt: new Date(0).toISOString()
+                };
+            }
+            return profiles[pk].appearance;
+        }
+
+        function saveActiveProfileAppearance(patch) {
+            const pk = currentProfile || 'user1';
+            const nowIso = new Date().toISOString();
+            const currentAp = getActiveProfileAppearance();
+            const updatedAp = { ...currentAp, ...patch, updatedAt: nowIso };
+            profiles[pk].appearance = updatedAp;
+            profiles[pk].updatedAt = nowIso;
+            localStorage.setItem(`expenselens_theme_${pk}`, updatedAp.theme);
+            localStorage.setItem(`expenselens_font_${pk}`, updatedAp.font);
+            localStorage.setItem(`expenselens_scale_${pk}`, updatedAp.scale);
+            localStorage.setItem('expenselens_profiles_cfg', JSON.stringify(profiles));
             applyAppearanceSettings();
-            triggerCloudSync(true);
+            triggerCloudSync(false);
+        }
+
+        function setThemeCombo(combo) {
+            saveActiveProfileAppearance({ theme: combo });
         }
 
         function setFontFamily(font) {
-            localStorage.setItem('expenselens_font', font);
-            applyAppearanceSettings();
-            triggerCloudSync(true);
+            saveActiveProfileAppearance({ font: font });
         }
 
         function setTextScale(scale) {
-            localStorage.setItem('expenselens_scale', scale);
-            applyAppearanceSettings();
-            triggerCloudSync(true);
+            saveActiveProfileAppearance({ scale: scale });
         }
 
         function applyAppearanceSettings() {
-            const font = localStorage.getItem('expenselens_font') || "'Plus Jakarta Sans', sans-serif";
+            const ap = getActiveProfileAppearance();
+            const font = ap.font || "'Plus Jakarta Sans', sans-serif";
             document.body.style.fontFamily = font;
             const fontSel = document.getElementById('settingsFontSelect');
             if (fontSel) fontSel.value = font;
 
-            const scale = localStorage.getItem('expenselens_scale') || 'normal';
+            const scale = ap.scale || 'normal';
             if (scale === 'compact') {
                 document.documentElement.style.fontSize = '13px';
             } else if (scale === 'large') {
@@ -2078,7 +2124,7 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
                 document.documentElement.style.fontSize = '14px';
             }
 
-            const combo = localStorage.getItem('expenselens_theme_combo') || 'emerald';
+            const combo = ap.theme || 'emerald';
             let bgGradient = 'radial-gradient(circle at top, #1e293b 0%, #090d16 100%)';
             if (combo === 'indigo') bgGradient = 'radial-gradient(circle at top, #312e81 0%, #090d16 100%)';
             else if (combo === 'rose') bgGradient = 'radial-gradient(circle at top, #881337 0%, #090d16 100%)';
@@ -2100,7 +2146,7 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
                 }
             });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=7', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=8', { updateViaCache: 'none' })
                     .then(reg => {
                         reg.update();
                         console.log('ServiceWorker registered & checked for updates!');

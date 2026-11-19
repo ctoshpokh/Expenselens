@@ -1,4 +1,4 @@
-const CACHE_NAME = 'receiptiq-v7-cloud-state-sync';
+const CACHE_NAME = 'receiptiq-v8-profile-appearance';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
