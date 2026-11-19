@@ -25,7 +25,8 @@
 
     <meta name="application-name" content="ReceiptIQ">
     <meta name="apple-mobile-web-app-title" content="ReceiptIQ">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body class="min-h-screen pb-32">
 
@@ -817,7 +818,7 @@
                     detail.innerText = text;
                 }
             } else if (state === 'error') {
-                if (icon) icon.className = "fa-solid fa-triangle-exclamation text-rose-400";
+                if (icon) icon.className = "fa-solid fa-cloud-arrow-up text-amber-400";
                 if (btn) btn.title = text;
                 if (badge) {
                     badge.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold";
@@ -2146,7 +2147,7 @@ Ensure sum(qty * unitPrice) equals £${userTotal.toFixed(2)}.`;
                 }
             });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=8', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('./sw.js?v=9', { updateViaCache: 'none' })
                     .then(reg => {
                         reg.update();
                         console.log('ServiceWorker registered & checked for updates!');

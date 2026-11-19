@@ -1,5 +1,13 @@
-const CACHE_NAME = 'receiptiq-v8-profile-appearance';
-const ASSETS = ['./index.html', './manifest.json'];
+const CACHE_NAME = 'receiptiq-v9-pwa-installable';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png',
+  './favicon-32x32.png'
+];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
